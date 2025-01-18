@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu de Mémoire - Réforme</title>
+    <style>
+        /* Style général pour le body */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f8ff;
+            text-align: center;
+            padding: 20px;
+        }
+        /* Styles du titre */
+        h1 {
+            font-size: 26px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        /* Styles de la consigne */
+        h2 {
+            font-size: 20px;
+            color: red;
+            margin-bottom: 20px;
+        }
+
+        /* Titre secondaire en bleu */
+        .title-blue {
+            font-size: 20px;
+            color: #003366;
+            margin-bottom: 10px;
+        }
+
+        /* Conteneur principal pour organiser les éléments */
+        .main-container {
+            display: flex;
+            flex-wrap: wrap; 
+            justify-content: center;
+            align-items: flex-start;
+            gap: 20px; 
+            margin-top: 20px;
+        }
+
+
+        /* Styles pour le jeu de mémoire */
+        .game-container-wrapper {
+            background-color: #ffffff;
+            border: 2px solid #0073e6;
+            border-radius: 10px;
+            padding: 10px;
+            width: 450px; 
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        /* Grille pour les cartes */
+        .game-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            max-width: 400px;
+            margin: 0px;
+        }
+
+        /* Style des cartes qui composent le jeu de mémoire */
+        .card {
+            width: 100px;
+            height: 100px;
+            position: relative;
+            cursor: pointer;
+            border: 2px solid #0073e6;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.3s;
+        }
+
+        /* Images des cartes du jeu de mémoire */
+        .card img {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+            display: none;
+        }
+
+        /* Styles pour les cartes retournées */
+        .card.flipped img {
+            display: block;
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+
+        /* Style et positionnement du conteneur du mur des Réformateurs */
+        #wall-container {
+            width: 400px; 
+            height: 200px;
+            background-color: #fff;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Styles pour chaque morceau du mur des Réformateurs */
+        .wall-piece {
+            position: absolute;
+            width: 100px;
+            height: 200px;
+            background-image: url('https://live.staticflickr.com/4038/4517129929_7feaefc7a8_b.jpg');
+            background-size: 400px 200px;
+            display: none;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 3px black;
+        }
+
+        /* Positions des personnages sur le mur */
+        #farel {
+            left: 0;
+            background-position: 0 0;
+        }
+
+        #calvin {
+            left: 100px;
+            background-position: -100px 0;
+        }
+
+        #beze {
+            left: 200px;
+            background-position: -200px 0;
+        }
+
+        #knox {
+            left: 300px;
+            background-position: -300px 0;
+        }
+
+
+        /* Style du conteneur des personnages trouvés dans le jeu de mémoire */
+        #found-images-container {
+            width: 350px; 
+            padding: 10px;
+            background-color: #e6f7ff;
+            border: 2px solid #0073e6;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Disposition des personnages trouvés */
+        #found-images {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        /* Styles des images trouvées */
+        .found-item img {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+        }
+
+        .found-item p {
+            margin-top: 5px;
+            font-size: 12px;
+        }
+
+        /* Style du bouton de fermeture permettant de revenir à l'accueil : index.html */
+        #close-btn {
+            position: absolute;
+            top: 0px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            background-color: red;
+            color: white;
+            font-size: 30px;
+            font-weight: bold;
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            z-index: 1000;
+            cursor: pointer;
+        }
+
+        #close-btn:hover {
+            background-color: darkred;
+        }
+
+        /* Positionnement du conteneur des personnages trouvés */
+        .right-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 30px;
+        }
+
+        /* Positionnement du titre */
+        .title-section {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        /* Message affiché une fois le jeu terminé */
+        #message {
+            margin-top: 10px;
+            font-size: 18px;
+            color: #0073e6;
+            font-weight: bold;
+            display: none;
+        }
+        
+        /* Réorganisation pour écrans réduits */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column; 
+                align-items: center; 
+            }
+
+            #found-images-container {
+                width: 100%; 
+                order: 1;
+                margin-bottom: 20px; 
+            }
+
+            .game-container-wrapper {
+                order: 2; 
+            }
+
+            #wall-container {
+                order: 3; 
+            }
+        }
+
+        @media (min-width: 769px) and (max-width: 1200px) {
+            .main-container {
+                flex-direction: row; 
+                justify-content: space-between; 
+                gap: 20px; 
+            }
+
+            #found-images-container {
+                order: 1;
+                width: auto; 
+                margin-right: 20px; 
+            }
+
+            .game-container-wrapper {
+                order: 2; 
+            }
+
+            #wall-container {
+                order: 3; 
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Bouton retour à l'accueil-->
+    <a href="index.html" id="close-btn">×</a>
+
+    <!-- Titre principal -->
+    <h1>Résolvez le memory en cliquant sur les cases pour retrouver les paires. Vous découvrirez les grandes figures de la Réforme et le célèbre Mur des Réformateurs.</h1>
+
+    <!-- Sous-titre avec le temps restant -->
+    <h2 id="timer-container">Les images se retournent dans : <span id="timer">30</span> secondes, mémorisez-les !</h2>
+
+    <!-- Conteneur principal -->
+    <div class="main-container">
+        <!-- Mur des Réformateurs qui se complète au fur et à mesure du jeu-->
+        <div>
+            <div class="title-blue">Le mur avec les Réformateurs genevois :</div>
+            <div id="wall-container">
+                <div class="wall-piece" id="farel">Guillaume Farel</div>
+                <div class="wall-piece" id="calvin">Jean Calvin</div>
+                <div class="wall-piece" id="beze">Théodore de Bèze</div>
+                <div class="wall-piece" id="knox">John Knox</div>
+            </div>
+
+        </div>
+
+        <!-- Jeu de mémoire encadré -->
+        <div class="game-container-wrapper">
+            <div class="game-container" id="game-container"></div>
+            <div id="message">À vous de jouer ! Retrouvez les paires en cliquant sur les cases</div>
+        </div>
+
+        <!-- Personnages de la Réforme trouvés dans le jeu -->
+        <div>
+            <div class="title-blue">Les principaux personnages de la Réforme :</div>
+            <div id="found-images-container">
+                <div id="found-images"></div>
+            </div>
+        </div>
+    </div>
+    <!-- Bibliothèque d3.js utilisée pour le script -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        // Mapping des images avec les noms des personnages
+        const imageMapping = {
+            'https://cdn.britannica.com/84/160584-050-68712D6A/Guillaume-Farel.jpg': 'Guillaume Farel',
+            'https://upload.wikimedia.org/wikipedia/commons/4/44/Jean_Calvin.png': 'Jean Calvin',
+            'https://upload.wikimedia.org/wikipedia/commons/d/d2/Theodore-de-Beze-2.jpg': 'Théodore de Bèze',
+            'https://upload.wikimedia.org/wikipedia/commons/a/a7/Portrait_of_John_Knox_%284671577%29.jpg': 'John Knox',
+            'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Ulrich_Zwingli.jpg/220px-Ulrich_Zwingli.jpg': 'Ulrich Zwingli',
+            'https://regenerationandrepentance.wordpress.com/wp-content/uploads/2015/10/2999922450.jpg': 'Pierre Viret',
+            'https://upload.wikimedia.org/wikipedia/commons/5/58/SebastianCastellio.jpg': 'Sebastian Castellio',
+            'https://museeprotestant.org/wp-content/uploads/2013/12/0000000044L.jpg': 'Heinrich Bullinger'
+        };
+
+        // Mapping entre les noms des personnages et leurs morceaux correspondants sur le mur des Réformateurs
+        const wallPieces = {
+            'Guillaume Farel': 'farel',
+            'Jean Calvin': 'calvin',
+            'Théodore de Bèze': 'beze',
+            'John Knox': 'knox'
+        };
+
+        // Création du jeu de cartes en dupliquant les clés de imageMapping (pour former des paires)
+        // Mélange des cartes de manière aléatoire
+        const cards = [...Object.keys(imageMapping), ...Object.keys(imageMapping)].sort(() => 0.5 - Math.random());
+        // Variables pour suivre les cartes retournées et le nombre de paires trouvées
+        let flippedCards = [];
+        let matchedPairs = 0;
+        // Sélection du conteneur pour le jeu de cartes
+        const container = d3.select("#game-container");
+        // Création des éléments DOM pour chaque carte
+        const cardElements = container.selectAll(".card")
+            .data(cards)
+            .enter()
+            .append("div")
+            .attr("class", "card")
+            .on("click", function(event, d) {
+                // Gestionnaire d'événements tactile pour retourner une carte au clic
+                const card = d3.select(this);
+                if (!card.classed("flipped") && flippedCards.length < 2) {
+                    // Si la carte n'est pas déjà retournée et qu'il y a moins de 2 cartes retournées
+                    card.classed("flipped", true); // Marquer la carte comme retournée
+                    flippedCards.push(card); // Ajouter la carte à la liste des cartes retournées
+
+                    if (flippedCards.length === 2) {
+                        // Si deux cartes sont retournées, vérifier si elles forment une paire
+                        checkForMatch();
+                    }
+                }
+            });
+
+        // Ajout des images aux cartes    
+        cardElements.append("img")
+            .attr("src", d => d)
+            .attr("alt", "Card Image");
+
+        // Initialisation du compte à rebours
+        let timeRemaining = 30;
+        const timerElement = d3.select("#timer");
+        const timerContainer = d3.select("#timer-container");
+
+        // Retourner toutes les cartes initialement pour les montrer aux joueurs
+        cardElements.classed("flipped", true);
+
+        // Démarrer un intervalle pour gérer le compte à rebours
+        const timerInterval = setInterval(() => {
+            timeRemaining--;
+            timerElement.text(timeRemaining);
+            if (timeRemaining <= 0) {
+                // Lorsque le temps est écoulé
+                clearInterval(timerInterval); // Arrêter le minuteur
+                cardElements.classed("flipped", false); // Retourner toutes les cartes face cachée
+                d3.select("#message").style("display", "block"); // Afficher le message pour commencer à jouer
+                timerContainer.style("display", "none"); // Masquer le conteneur du minuteur
+            }
+        }, 1000);
+        // Fonction pour afficher un message de félicitations lorsque le jeu est terminé
+        function showCompletionMessage() {
+        // Création du conteneur principal pour le message de bravo
+        const bravoContainer = document.createElement('div');
+        bravoContainer.style.position = 'fixed';
+        bravoContainer.style.top = '50%';
+        bravoContainer.style.left = '50%';
+        bravoContainer.style.transform = 'translate(-50%, -50%)';
+        bravoContainer.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+        bravoContainer.style.border = '2px solid #0073e6';
+        bravoContainer.style.borderRadius = '10px';
+        bravoContainer.style.boxShadow = '0px 4px 10px rgba(0, 0, 0, 0.3)';
+        bravoContainer.style.padding = '20px';
+        bravoContainer.style.textAlign = 'center';
+        bravoContainer.style.zIndex = '1000';
+
+        // Message Bravo
+        const bravoMessage = document.createElement('h2');
+        bravoMessage.textContent = 'Bravo ! Vous avez complété le jeu de mémoire !';
+        bravoMessage.style.fontSize = '24px';
+        bravoMessage.style.color = '#28a745';
+        bravoMessage.style.marginBottom = '20px';
+
+        // Bouton Revenir à l'accueil
+        const returnButton = document.createElement('button');
+        returnButton.textContent = 'Revenir à l\'accueil';
+        returnButton.style.fontSize = '18px';
+        returnButton.style.padding = '10px 20px';
+        returnButton.style.border = 'none';
+        returnButton.style.borderRadius = '5px';
+        returnButton.style.backgroundColor = 'rgba(76, 175, 80, 0.9)'; 
+        returnButton.style.color = '#ffffff';
+        returnButton.style.cursor = 'pointer';
+        returnButton.style.boxShadow = '0px 4px 6px rgba(0, 0, 0, 0.2)';
+        returnButton.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+
+        // Ajouter le message et le bouton au conteneur
+        bravoContainer.appendChild(bravoMessage);
+        bravoContainer.appendChild(returnButton);
+
+        // Ajouter le conteneur au body
+        document.body.appendChild(bravoContainer);
+        }
+
+        // Fonction pour vérifier si deux cartes retournées forment une paire
+        function checkForMatch() {
+        const [firstCard, secondCard] = flippedCards;
+
+        // Si les images des deux cartes correspondent
+        if (firstCard.select("img").attr("src") === secondCard.select("img").attr("src")) {
+            matchedPairs++; // Incrémenter le compteur des paires trouvées
+            flippedCards = []; // Réinitialiser les cartes retournées
+ 
+            // Ajouter l'image et le nom du personnage dans la liste des personnages trouvés
+            const matchedImageSrc = firstCard.select("img").attr("src");
+            const characterName = imageMapping[matchedImageSrc];
+
+            d3.select("#found-images")
+                .append("div")
+                .attr("class", "found-item")
+                .html(`<img src="${matchedImageSrc}" alt="${characterName}"><p>${characterName}</p>`);
+
+            // Ajouter l'image et le nom du personnage dans la liste des personnages trouvés
+            if (wallPieces[characterName]) {
+                document.getElementById(wallPieces[characterName]).style.display = "block";
+            }
+
+            // Vérifier si toutes les paires ont été trouvées
+            if (matchedPairs === Object.keys(imageMapping).length) {
+                d3.select("#message").text("Bravo ! Vous avez trouvé toutes les paires !");
+                localStorage.setItem('reformationGameCompleted', 'true');
+                
+                // Appeler la fonction pour afficher le message de bravo
+                showCompletionMessage();
+            }
+        } else {
+            // Si les cartes ne correspondent pas, les retourner après un délai
+            setTimeout(() => {
+                firstCard.classed("flipped", false);
+                secondCard.classed("flipped", false);
+                flippedCards = [];
+            }, 1000);
+        }
+    }
+    </script>
+</body>
+</html>

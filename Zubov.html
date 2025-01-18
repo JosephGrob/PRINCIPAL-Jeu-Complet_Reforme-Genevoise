@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reconstruisez l'image du Musée Tatiana Zoubov en déplaçant les images</title>
+    <style>
+        /* Styles généraux pour la mise en page du corps */
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        /* Styles pour les pièces interactives du puzzle */
+        .piece {
+            cursor: grab;
+            touch-action: none;
+        }
+
+        /* Message de succès lorsqu'un joueur termine le puzzle */
+        #message {
+            margin-top: 20px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        /* Style pour le message "Bravo" qui apparaît lorsque le puzzle est complété */
+        #congratulationsMessage {
+            position: absolute;
+            top: 150px;
+            font-size: 80px;
+            font-weight: bold;
+            color: rgb(0, 255, 34);
+            display: none; 
+            z-index: 10;
+            text-align: center;
+            width: 100%;
+        }
+
+        /* Style pour le bouton de retour à l'accueil */
+        #closeButton {
+            position: absolute;
+            top: 0px;
+            left: 20px;
+            font-size: 30px;
+            color: black;
+            text-decoration: none;
+            font-weight: bold;
+            background-color: #f9f9f9;
+            padding: 5px;
+            border-radius: 50%;
+            border: 2px solid black;
+        }
+
+        /* Effet visuel au survol de la croix */
+        #closeButton:hover {
+            color: white;
+            background-color: red;
+        }
+
+
+
+        /* Style pour le conteneur du titre et sous-titre */
+        #title-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+
+        /* Style pour le cadre où le puzzle est reconstitué */
+        #puzzle-frame {
+            position: absolute;
+            width: 530px; 
+            height: 600px; 
+            border: 4px solid #8B4513; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            top: 388px; 
+            left: 50%; 
+            transform: translate(-50%, -50%);
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+            background-color: #f8f8f8; 
+        }
+
+        /* Zone intérieure où les pièces du puzzle sont organisées */
+        #puzzle-area {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); 
+            grid-template-rows: repeat(2, 1fr); 
+            gap: 2px; 
+            background-image: linear-gradient(to right, #ccc 1px, transparent 1px),
+                            linear-gradient(to bottom, #ccc 1px, transparent 1px); 
+            background-size: calc(100% / 3) calc(100% / 2); 
+            border: 2px solid #8B4513; 
+            border-radius: 8px;
+        }
+
+
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <!-- Conteneur pour le titre et la description -->
+    <div id="title-container">
+        <h1 style="font-size: 28px; color: #003366; font-weight: bold; margin-top: 0px;">
+            Musée Tatiana Zoubov - Monument commémoratif de Jean Calvin</h1>
+        <h2 style="font-size: 18px; color: #555555; font-weight: normal; margin-bottom: 10px;"></h2>
+            Ce monument, situé dans les jardins du musée Tatiana Zoubov, célèbre la mémoire de Jean Calvin, figure phare de la Réforme. 
+            Déplacez les images dans le cadre pour reconstituer cette œuvre emblématique !
+        </h2>
+    </div>
+    <!-- Zone où le puzzle est affiché -->
+    <div id="puzzle-frame">
+        <div id="puzzle-area"></div>
+    </div>
+    <!-- Message de succès affiché une fois le puzzle complété -->
+    <div id="congratulationsMessage">Bravo !</div>
+
+    <!-- Bouton de fermeture pour ferme le puzzle et revenir à index.html -->
+    <button id="closeButton" onclick="goBackToMain()">✖</button>
+
+    <h2 id="message"></h2>
+
+    <script>
+        // Fonction pour rediriger vers index.html
+        function goBackToMain() {
+            window.location.href = "index.html";
+        }
+
+        // Fonction pour initialiser le puzzle
+        function openJigsawPuzzle() {
+            const imageURL = 'https://www.bge-geneve.ch/iconographie/sites/default/files/styles/artwork_carousel_full/public/image/2021-05/icon_m_doum_302.jpeg.webp';  // URL de l'image du puzzle
+            const successMessage = document.getElementById('message');
+            const congratulationsMessage = document.getElementById('congratulationsMessage'); // Sélectionne l'élément Bravo
+
+            if (successMessage) {
+                console.log("Lancement du puzzle");
+                const jigsaw = new Jigsaw(imageURL, successMessage, congratulationsMessage);
+            } else {
+                console.error("Message de succès non trouvé. Puzzle non initialisé.");
+            }
+        }
+
+        // Classe représentant le puzzle
+        class Jigsaw {
+            constructor(imageURL, successMessage, congratulationsMessage) {
+                // Création d'une nouvelle image
+                this.image = new Image();
+                this.image.onload = () => {
+                    console.log("Image chargée avec succès.");
+
+                    // Réduction en coupant l'image des quatre côtés
+                    const offset = 25; 
+                    this.imageWidth = this.image.width - 6 * offset; 
+                    this.imageHeight = this.image.height - 12 * offset; 
+
+                    // Dimensions des pièces pour une grille 2x3
+                    this.pieceWidth = this.imageWidth / 3;  
+                    this.pieceHeight = this.imageHeight / 2;  
+
+                    // Offsets pour ajuster la découpe des pièces
+                    this.offsetX = offset; 
+                    this.offsetY = offset; 
+
+                    // Références aux éléments d'interface
+                    this.successMessage = successMessage;
+                    this.congratulationsMessage = congratulationsMessage;
+                    this.createdPieces = [];
+                    this.successMessageDisplayed = false;
+                    this.generatePieces();
+                };
+
+
+                // Charger l'image à partir de l'URL spécifiée
+                this.image.src = imageURL;
+            }
+
+            // Générer les pièces du puzzle
+            generatePieces() {
+                // Récupère les dimensions du cadre où le puzzle sera placé
+                const frame = document.getElementById('puzzle-frame').getBoundingClientRect();
+                const frameTop = frame.top;
+                const frameBottom = frame.bottom;
+                const frameLeft = frame.left;
+                const frameRight = frame.right;
+
+            // Boucle pour créer une grille 2x3 de pièces
+            for (let y = 0; y < 2; y++) { 
+                for (let x = 0; x < 3; x++) { 
+                    const pieceID = y * 3 + x; // ID de la pièce pour une grille 2x3
+                    const newPiece = new Piece(this.image, x, y, this, pieceID);
+
+                        // Positionner aléatoirement les pièces à gauche ou à droite du cadre
+                        const randomSide = Math.random() > 0.5 ? 'left' : 'right';
+                        newPiece.canvas.style.position = 'absolute';
+
+                        if (randomSide === 'left') {
+                            // Positionnement à gauche du cadre
+                            newPiece.canvas.style.left = `${Math.random() * (frameLeft - this.pieceWidth)}px`;
+                        } else {
+                            // Positionnement à droite du cadre
+                            newPiece.canvas.style.left = `${frameRight + Math.random() * (window.innerWidth - frameRight - this.pieceWidth)}px`;
+                        }
+
+                        // Positionnement vertical dans la plage du cadre
+                        newPiece.canvas.style.top = `${Math.random() * (frameBottom - frameTop - this.pieceHeight) + frameTop}px`;
+
+                        // Ajouter la pièce au DOM
+                        document.body.appendChild(newPiece.canvas);
+                        this.createdPieces.push(newPiece);
+                    }
+                }
+            }
+
+
+
+
+            // Méthode qui fige les pièces après le succès
+            freezePieces() {
+                // Désactive les interactions pour toutes les pièces
+                this.createdPieces.forEach(piece => {
+                    piece.disableInteraction(); 
+                });
+                console.log("Le puzzle est figé.");
+            }
+
+            // Message de félicition si toutle puzzle est réussi ! 
+            showCongratulationsMessage() {
+                // Rendre visible le message "Bravo !"
+                this.congratulationsMessage.style.display = 'block'; 
+
+                console.log("Bravo affiché !");
+                
+                // Enregistrer que le mini-jeu du Musée Tatiana Zoubov est réussi
+                localStorage.setItem('tatianaZoubovPuzzleCompleted', 'true');
+
+                // Crée un conteneur blanc sous le message "Bravo !"
+                const bravoContainer = document.createElement('div');
+                bravoContainer.style.position = 'absolute';
+                bravoContainer.style.top = '250px'; 
+                bravoContainer.style.left = '50%';
+                bravoContainer.style.transform = 'translateX(-50%)';
+                bravoContainer.style.width = '300px';
+                bravoContainer.style.padding = '20px';
+                bravoContainer.style.backgroundColor = 'white';
+                bravoContainer.style.border = '2px solid green';
+                bravoContainer.style.borderRadius = '10px';
+                bravoContainer.style.textAlign = 'center';
+                bravoContainer.style.boxShadow = '0px 4px 6px rgba(0, 0, 0, 0.1)';
+                bravoContainer.style.zIndex = '20';
+
+                // Ajoute un texte au conteneur
+                const bravoText = document.createElement('p');
+                bravoText.innerText = 'Vous avez réussi le puzzle !';
+                bravoText.style.fontSize = '18px';
+                bravoText.style.color = '#003366';
+                bravoText.style.marginBottom = '15px';
+                bravoContainer.appendChild(bravoText);
+
+                // Ajoute le bouton "Retourner à l'accueil" au conteneur
+                const returnButton = document.createElement('button');
+                returnButton.innerText = 'Retourner à l’accueil';
+                returnButton.style.padding = '10px 20px';
+                returnButton.style.fontSize = '16px';
+                returnButton.style.color = 'white';
+                returnButton.style.backgroundColor = '#00bfff';
+                returnButton.style.border = 'none';
+                returnButton.style.borderRadius = '8px';
+                returnButton.style.cursor = 'pointer';
+                returnButton.style.boxShadow = '0px 4px 6px rgba(0, 0, 0, 0.2)';
+                returnButton.style.touchAction = 'manipulation'; 
+
+                // Redirection vers la page d'accueil lorsqu'on clique sur le bouton
+                returnButton.addEventListener('click', () => {
+                    window.location.href = 'index.html';
+                });
+
+                // Ajoute le bouton au conteneur
+                bravoContainer.appendChild(returnButton);
+
+                // Ajoute le conteneur au body
+                document.body.appendChild(bravoContainer);
+            }
+            // Vérifie si le puzzle est complété
+            checkPuzzleCompleted() {
+                // Vérifie si toutes les pièces sont correctement positionnées
+                console.log("Vérification si le puzzle est complété...");
+
+                const allInFrame = this.areAllPiecesInFrame();
+                const completed = this.createdPieces.every(piece => piece.isAdjacentToCorrectNeighbors());
+
+                console.log("Toutes les pièces dans le cadre :", allInFrame);
+                console.log("Puzzle correctement aligné :", completed);
+
+                if (allInFrame && completed && !this.successMessageDisplayed) {
+                    console.log("Puzzle complété avec succès !");
+                    this.successMessage.textContent = "Bravo !";
+                    this.successMessage.style.display = 'block';
+                    this.successMessageDisplayed = true;
+                    this.freezePieces(); 
+                    this.showCongratulationsMessage(); 
+                } else if (!allInFrame) {
+                    console.log("Certaines pièces ne sont pas dans le cadre.");
+                } else {
+                    this.successMessage.textContent = "";
+                }
+            }
+
+
+            // Vérifie si une pièce spécifique est dans le cadre
+            isPieceInFrame(piece) {
+                const frame = document.getElementById('puzzle-frame').getBoundingClientRect();
+                const pieceRect = piece.canvas.getBoundingClientRect();
+                const margin = 20; // Tolérance autour du cadre
+
+                return (
+                    pieceRect.left >= frame.left - margin &&
+                    pieceRect.right <= frame.right + margin &&
+                    pieceRect.top >= frame.top - margin &&
+                    pieceRect.bottom <= frame.bottom + margin
+                );
+            }
+
+            // Vérifie si toutes les pièces sont dans le cadre
+            areAllPiecesInFrame() {
+                return this.createdPieces.every(piece => this.isPieceInFrame(piece));
+            }
+
+        }
+
+        // Classe pour représenter une pièce individuelle du puzzle
+        class Piece {
+            constructor(image, x, y, jigsaw, id) {
+                // Crée un élément <canvas> pour représenter la pièce du puzzle
+                this.canvas = document.createElement('canvas');
+                this.canvas.width = jigsaw.pieceWidth;
+                this.canvas.height = jigsaw.pieceHeight;
+                this.canvas.setAttribute('data-id', id);
+
+                // Contexte de dessin pour dessiner la pièce
+                this.ctx = this.canvas.getContext('2d');
+                this.x = x * jigsaw.pieceWidth;
+                this.y = y * jigsaw.pieceHeight;
+                this.jigsaw = jigsaw;
+                this.id = id;
+                this.correctX = this.x;
+                this.correctY = this.y;
+
+                // Gestionnaires pour les événements de glisser-déposer
+                this.mouseDownHandler = null;  
+                this.touchStartHandler = null;
+
+                // Dessine la pièce à partir de l'image source
+                this.drawPiece();
+
+                // Initialise les événements pour permettre le déplacement
+                this.initDragEvents();
+            }
+
+             // Initialise les événements de glissement pour permettre de déplacer la pièce
+            initDragEvents() {
+                let offsetX, offsetY;
+
+                // Fonction pour gérer le déplacement avec la souris (peu utile car jeu destiné à être tactile !)
+                const onMouseMove = (event) => {
+                    this.canvas.style.left = `${event.clientX - offsetX}px`;
+                    this.canvas.style.top = `${event.clientY - offsetY}px`;
+                    console.log(`Pièce ${this.id} déplacée à (${this.canvas.style.left}, ${this.canvas.style.top})`);
+                };
+
+                // Fonction pour gérer le déplacement tactile
+                const onTouchMove = (event) => {
+                    const touch = event.touches[0];
+                    this.canvas.style.left = `${touch.clientX - offsetX}px`;
+                    this.canvas.style.top = `${touch.clientY - offsetY}px`;
+                    console.log(`Pièce ${this.id} déplacée en tactile à (${this.canvas.style.left}, ${this.canvas.style.top})`);
+                };
+
+                // Fonction pour gérer la fin du déplacement avec la souris (peu utile car jeu destiné à être tactile !)
+                const onMouseUp = () => {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                    this.jigsaw.checkPuzzleCompleted();
+                };
+
+                // Fonction pour gérer la fin du déplacement tactile
+                const onTouchEnd = () => {
+                    document.removeEventListener('touchmove', onTouchMove);
+                    document.removeEventListener('touchend', onTouchEnd);
+                    this.jigsaw.checkPuzzleCompleted();
+                };
+
+                // Gestionnaire pour le clic souris pour commencer le déplacement (peu utile car jeu destiné à être tactile !)
+                this.mouseDownHandler = (event) => {
+                    offsetX = event.clientX - this.canvas.getBoundingClientRect().left;
+                    offsetY = event.clientY - this.canvas.getBoundingClientRect().top;
+                    console.log(`Pièce ${this.id} prise en main.`);
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                };
+
+                // Gestionnaire pour le début du toucher pour commencer le déplacement
+                this.touchStartHandler = (event) => {
+                    const touch = event.touches[0];
+                    offsetX = touch.clientX - this.canvas.getBoundingClientRect().left;
+                    offsetY = touch.clientY - this.canvas.getBoundingClientRect().top;
+                    console.log(`Pièce ${this.id} prise en main en tactile.`);
+                    document.addEventListener('touchmove', onTouchMove);
+                    document.addEventListener('touchend', onTouchEnd);
+                };
+
+                // Ajoute les gestionnaires d'événements au canvas
+                this.canvas.addEventListener('mousedown', this.mouseDownHandler);
+                this.canvas.addEventListener('touchstart', this.touchStartHandler);
+            }
+
+             // Désactive les interactions sur la pièce (après résolution du puzzle)
+            disableInteraction() {
+                this.canvas.removeEventListener('mousedown', this.mouseDownHandler);  
+                this.canvas.removeEventListener('touchstart', this.touchStartHandler);
+                this.canvas.style.cursor = 'default';  
+                console.log(`Interactions désactivées pour la pièce ${this.id}`);
+            }
+
+            // Vérifie si la pièce est correctement alignée avec ses voisins
+            isAdjacentToCorrectNeighbors() {
+                const margin = 20;  
+                const neighbors = {
+                    0: { right: 1, bottom: 3 }, 
+                    1: { left: 0, right: 2, bottom: 4 }, 
+                    2: { left: 1, bottom: 5 }, 
+                    3: { top: 0, right: 4 },  
+                    4: { top: 1, left: 3, right: 5 },  
+                    5: { top: 2, left: 4 }  
+                };
+
+                const currentX = parseInt(this.canvas.style.left);
+                const currentY = parseInt(this.canvas.style.top);
+                const neighborPositions = neighbors[this.id];
+
+                // Vérifie si les bords spécifiques sont correctement alignés avec les voisins
+                return Object.keys(neighborPositions).every(direction => {
+                    const neighborID = neighborPositions[direction];
+                    const neighborPiece = this.jigsaw.createdPieces.find(piece => piece.id === neighborID);
+
+                    if (!neighborPiece) return false;
+
+                    const neighborX = parseInt(neighborPiece.canvas.style.left);
+                    const neighborY = parseInt(neighborPiece.canvas.style.top);
+
+                    let isAligned = false;
+                    switch (direction) {
+                        case 'right':
+                            isAligned = Math.abs(currentX + this.jigsaw.pieceWidth - neighborX) < margin;
+                            break;
+                        case 'left':
+                            isAligned = Math.abs(currentX - (neighborX + this.jigsaw.pieceWidth)) < margin;
+                            break;
+                        case 'top':
+                            isAligned = Math.abs(currentY - (neighborY + this.jigsaw.pieceHeight)) < margin;
+                            break;
+                        case 'bottom':
+                            isAligned = Math.abs(currentY + this.jigsaw.pieceHeight - neighborY) < margin;
+                            break;
+                    }
+                    // Retourne vrai si aligné, faux sinon
+                    return isAligned;
+                });
+            }
+
+            // Dessine la pièce sur le canvas
+            drawPiece() {
+                const xOffset = this.x + this.jigsaw.offsetX; 
+                const yOffset = this.y + this.jigsaw.offsetY; 
+                this.ctx.drawImage(
+                    this.jigsaw.image,
+                    xOffset, yOffset, 
+                    this.jigsaw.pieceWidth, this.jigsaw.pieceHeight, 
+                    0, 0, 
+                    this.canvas.width, this.canvas.height 
+                );
+                console.log(`Pièce ${this.id} dessinée à partir de l'image avec offset.`);
+            }
+
+        }
+
+        // Initialise le puzzle
+        openJigsawPuzzle();
+    </script>
+</body>
+</html>
+

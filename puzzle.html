@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Puzzle</title>
+    <!-- Ajoutez les liens vers les feuilles de style CSS nécessaires ici -->
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Styles pour la croix */
+        #close-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 30px;
+            color: black;
+            text-decoration: none;
+            font-weight: bold;
+            background-color: #f9f9f9;
+            padding: 5px;
+            border-radius: 50%;
+            border: 2px solid black;
+        }
+
+        #close-btn:hover {
+            color: white;
+            background-color: red;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" id="close-btn">&#10006;</a>
+    <!-- Conteneur pour afficher le puzzle -->
+    <div id="puzzle-container">
+        <!-- Le puzzle sera affiché ici -->
+    
+    </div>
+    <script src="jigsaw.js"></script>
+    <!-- Scripts -->
+    <!-- Ajoutez les liens vers les scripts JavaScript nécessaires ici -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+    <script src="jigsaw.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

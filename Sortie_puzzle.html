@@ -1,0 +1,352 @@
+<body>
+    <!-- Croix de retour à la carte principale -->
+    <a href="index.html" id="close-btn">&#10006;</a>
+
+    <!-- Titre et sous-titre explicatifs pour le jeu -->
+    <div style="text-align: center; margin-bottom: 20px; margin-top: 5px;">
+        <h1 style="font-size: 28px; color: #003366; font-weight: bold; margin-top: 0px;">
+            La Tour du Molard : Horloge de la Réforme et Témoins de l'Histoire Genevoise
+        </h1>
+        <h2 style="font-size: 18px; color: #555555; font-weight: normal; margin-top: 0px;">
+            La Tour du Molard, située au cœur du commerce genevois, symbolise le rôle de la ville durant la Réforme. 
+            Reconstruite en 1591, la Tour du Molard arbore les armoiries des figures clés de la Réforme, 
+            telles que Calvin, Farel et de Bèze. Cliquez sur chaque pièce pour retrouver son image correspondante afin de reconstituer la photo de cette tour emblématique !
+        </h2>
+    </div>
+
+    <!-- Conteneur pour afficher la miniature de l'image à reconstituer -->
+    <div id="miniature-container">
+        <p id="miniature-label">Photo à reproduire : </p>
+        <img 
+            id="puzzle-thumbnail" 
+            src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhHHt_ag5xlFSR2mudaQEtwbGousom1W40MB71BvXS_1ghjhWD23zchRBengM040zBcjhmAxOxDFALIgl8pVTKWgcbQjGoKbtXbaV7awPJ2boHeRoqigbeYtLUjmsjsMI3l57kEG7LE4Bi7gypMzveuCR7qz1Zk9JOBd_9wyYTez8jMWOLP2Oeocmue7co/s800/tour-du-molard-geneve-suisse-7.JPG" 
+            alt="Miniature de l'image à reconstituer"
+        >
+    </div>
+
+    <!-- Conteneur pour le puzzle interactif -->
+    <div id="output"></div>
+    <div id="puzzle-container"></div>
+
+    <!-- Message de succès qui s'affiche à la fin -->
+    <div id="success-message" style="display: none; position: absolute; width: 500px; left: 700px; top: 350px; height: 400px;">
+        Bravo!
+    </div>
+
+    <!-- Script principal pour gérer le puzzle -->
+    <script>
+        // Fonction pour initialiser le puzzle
+        function openJigsawPuzzle() {
+            // URL de l'image utilisée pour le puzzle
+            const imageURL = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhHHt_ag5xlFSR2mudaQEtwbGousom1W40MB71BvXS_1ghjhWD23zchRBengM040zBcjhmAxOxDFALIgl8pVTKWgcbQjGoKbtXbaV7awPJ2boHeRoqigbeYtLUjmsjsMI3l57kEG7LE4Bi7gypMzveuCR7qz1Zk9JOBd_9wyYTez8jMWOLP2Oeocmue7co/s800/tour-du-molard-geneve-suisse-7.JPG';
+            // Récupération des éléments HTML pour afficher le puzzle
+            const output = document.getElementById('output');
+            const successMessage = document.getElementById('success-message');
+
+            if (output && successMessage) {
+                // Initialisation de la classe Jigsaw pour créer le puzzle
+                const jigsaw = new Jigsaw(imageURL, output, successMessage);
+                document.getElementById('puzzle-container').style.marginTop = '30x'; // Augmentez la marge ici
+            } else {
+                console.error("Output or success message element not found. Puzzle cannot be initialized.");
+            }
+        }
+
+        // Classe pour gérer le puzzle interactif
+        class Jigsaw {
+            constructor(imageURL, output, successMessage) {
+                this.image = new Image();
+                this.image.onload = () => {
+                    // Définition des dimensions de l'image et des pièces du puzzle
+                    this.imageWidth = this.image.width;
+                    this.imageHeight = this.image.height;
+                    this.pieceWidth = this.imageWidth / 3;
+                    this.pieceHeight = this.imageHeight / 3;
+                    this.output = output;
+                    this.successMessage = successMessage;
+                    this.createdPieces = [];
+                    this.successMessageDisplayed = false;
+                    this.userInteracted = false; // Flag pour surveiller l'interaction utilisateur
+                    this.isLocked = false; // Indique si le puzzle est verrouillé
+
+                    // Générer l'agencement initial des pièces
+                    this.generateRandomLayout();
+                    this.generatePieceIDs();
+                    this.checkPuzzleCompleted(); 
+                };
+                this.image.onerror = (error) => {
+                    console.error("Error loading image:", error);
+                };
+                this.image.src = imageURL;
+            }
+
+            // Générer les IDs des pièces pour vérifier leur position correcte
+            generatePieceIDs() {
+                for (let y = 0; y < 3; y++) {
+                    for (let x = 0; x < 3; x++) {
+                        const pieceID = y * 3 + x;
+                        this.createdPieces[pieceID].correctID = pieceID;
+                    }
+                }
+            }
+
+            // Disposer les pièces du puzzle de manière aléatoire
+            generateRandomLayout() {
+                const pieceIDs = Array.from({ length: 9 }, (_, index) => index);
+                pieceIDs.sort(() => Math.random() - 0.5);
+
+                for (let y = 0; y < 3; y++) {
+                    for (let x = 0; x < 3; x++) {
+                        const pieceID = pieceIDs.pop();
+                        const newPiece = new Piece(this.image, x, y, this, pieceID);
+                        newPiece.canvas.style.position = 'absolute';
+                        newPiece.canvas.style.left = (x * this.pieceWidth + 350) + 'px'; // Position de la pièce
+                        newPiece.canvas.style.top = (y * this.pieceHeight + 150) + 'px'; // Position de la pièce
+
+                        // Style visuel des pièces
+                        newPiece.canvas.style.border = '1px solid #ccc'; // Couleur bois
+                        newPiece.canvas.style.borderRadius = '8px'; // Ajout d'arrondi pour un effet tableau
+
+                        this.output.appendChild(newPiece.canvas);
+                        this.createdPieces.push(newPiece);
+                    }
+                }
+            }
+
+            // Vérifie si toutes les pièces sont dans la position correcte
+            checkPuzzleCompleted() {
+                if (!this.userInteracted) return; // Pas de vérification complète avant interaction de l'utilisateur
+
+                // Vérifie chaque pièce pour s'assurer qu'elle est correcte
+                const correctnessArray = this.createdPieces.map(piece => piece.isCorrect());
+                console.log("État de chaque pièce (true = correct, false = incorrect) :", correctnessArray);
+
+                const completed = correctnessArray.every(isCorrect => isCorrect);
+                if (completed) {
+                    console.log("Puzzle réussi !");
+                    // Affiche le message de succès
+                    this.successMessage.style.display = 'block';
+                    this.isLocked = true; // Verrouille le puzzle
+
+                    // Stocker l'information que le puzzle est réussi dans le localStorage
+                    localStorage.setItem('puzzleCompleted', 'true');
+
+                    // Ajouter le conteneur avec le bouton "Retourner à l'accueil"
+                    const container = document.createElement('div');
+                    container.style.position = 'absolute';
+                    container.style.top = '60%';
+                    container.style.left = '50%';
+                    container.style.transform = 'translate(-50%, -50%)';
+                    container.style.backgroundColor = '#ffffff';
+                    container.style.border = '2px solid #ccc';
+                    container.style.borderRadius = '10px';
+                    container.style.boxShadow = '0px 4px 10px rgba(0, 0, 0, 0.3)';
+                    container.style.padding = '20px';
+                    container.style.textAlign = 'center';
+
+                    // Ajouter un message à l'intérieur du conteneur
+                    const message = document.createElement('p');
+                    message.textContent = 'Bravo ! Vous avez réussi le puzzle.';
+                    message.style.fontSize = '24px';
+                    message.style.color = '#333';
+                    message.style.marginBottom = '20px';
+                    container.appendChild(message);
+
+                    // Ajouter le bouton
+                    const button = document.createElement('button');
+                    button.textContent = 'Retourner à l\'accueil';
+                    button.style.fontSize = '18px';
+                    button.style.padding = '10px 20px';
+                    button.style.border = 'none';
+                    button.style.borderRadius = '5px';
+                    button.style.backgroundColor = '#4CAF50';
+                    button.style.color = '#ffffff';
+                    button.style.cursor = 'pointer';
+
+                    // Rediriger vers index.html lorsque le bouton est cliqué
+                    button.addEventListener('click', () => {
+                        window.location.href = 'index.html';
+                    });
+
+                    container.appendChild(button);
+                    document.body.appendChild(container);
+                } else {
+                    console.log("Puzzle non résolu.");
+                }
+            }
+        }
+
+        // Classe pour une pièce individuelle du puzzle
+        class Piece {
+            constructor(image, x, y, jigsaw, id) {
+                this.canvas = document.createElement('canvas');
+                this.canvas.width = jigsaw.pieceWidth;
+                this.canvas.height = jigsaw.pieceHeight;
+                this.canvas.setAttribute('data-id', id);
+                this.ctx = this.canvas.getContext('2d');
+                this.x = x * jigsaw.pieceWidth;
+                this.y = y * jigsaw.pieceHeight;
+                this.jigsaw = jigsaw;
+                this.id = id;
+                this.order = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+                this.correctID = null;
+                this.isInitial = true; 
+                this.drawPiece();
+                this.canvas.addEventListener('click', () => this.onClick());
+            }
+
+            onClick() {
+                // Empêche l'interaction si le puzzle est verrouillé
+                if (this.jigsaw.isLocked) return;
+                // Marque que l'utilisateur a interagi
+                this.jigsaw.userInteracted = true; 
+
+                if (this.isInitial) {
+                    // Retirer le fond vert après le premier clic
+                    this.isInitial = false;
+                } else {
+                    // Cycle les images comme auparavant
+                    this.order.push(this.order.shift());
+                }
+
+                // Efface le contenu actuel du canvas avant de redessiner
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                // Redessine la pièce en fonction de l'ordre actuel
+                this.drawPiece();
+                // Met à jour l'ID de la pièce pour refléter sa nouvelle position
+                this.updatePieceID();
+                // Vérifie si toutes les pièces sont à la bonne place
+                this.jigsaw.checkPuzzleCompleted();
+            }
+
+            // Vérifie si la pièce est correcte, c'est-à-dire :
+            // 1. Elle n'est plus à son état initial (fond vert).
+            // 2. Son ID correspond à la position correcte.
+            isCorrect() {
+                return !this.isInitial && this.id === this.correctID;
+            }
+
+            // Met à jour l'ID de la pièce en fonction de l'ordre actuel
+            updatePieceID() {
+                const pieceIndex = this.order[0];
+                this.id = pieceIndex;
+
+                if (!this.isInitial && this.isCorrect()) {
+                    console.log("Image correcte pour cette pièce !");
+                }
+                // Met à jour l'attribut data-id du canvas pour refléter le nouvel ID
+                this.canvas.setAttribute('data-id', this.id);
+                // Vérifier si le puzzle est complet à chaque mise à jour de l'ID
+                this.jigsaw.checkPuzzleCompleted(); 
+            }
+
+            // Dessine les pièces
+            drawPiece() {
+                if (this.isInitial) {
+                    // Si la pièce est à son état initial, on affiche un fond vert foncé
+                    this.ctx.fillStyle = '#013220'; 
+                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                } else {
+                    // Si ce n'est pas l'état initial, on dessine une portion de l'image
+                    const pieceIndex = this.order[0];
+                    const xOffset = pieceIndex % 3 * this.jigsaw.pieceWidth;
+                    const yOffset = Math.floor(pieceIndex / 3) * this.jigsaw.pieceHeight;
+
+                    // Dessine l'image de la pièce sur le canvas
+                    this.ctx.drawImage(
+                        this.jigsaw.image,
+                        xOffset, yOffset, this.jigsaw.pieceWidth, this.jigsaw.pieceHeight,
+                        0, 0, this.canvas.width, this.canvas.height
+                    );
+                }
+            }
+        }
+
+        // Fonction pour placer une lettre à une position spécifique dans les traits de lettres
+        function placeLetterAtPosition(position, letter) {
+            const letterDisplay = document.getElementById(`letter-display-${position}`);
+            if (letterDisplay) {
+                letterDisplay.textContent = letter;
+            } else {
+                console.error("Le conteneur de la lettre n'a pas été trouvé.");
+            }
+        }
+
+        openJigsawPuzzle();
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            openJigsawPuzzle();
+        });
+    </script>
+
+    <style>
+        /* Styles pour le bouton de retour à la page index.html */
+        #close-btn {
+            position: absolute;
+            top: 0px;
+            left: 0px;
+            font-size: 30px;
+            color: black;
+            text-decoration: none;
+            font-weight: bold;
+            background-color: white;
+            padding: 5px;
+            border-radius: 50%;
+            border: 2px solid black;
+            z-index: 1000;
+        }
+
+        /* Change l'apparence du bouton au survol avec la souris */
+        #close-btn:hover {
+            background-color: red;
+            color: white;
+        }
+
+        /* Image miniature */
+        #puzzle-thumbnail {
+            position: absolute;
+            top: 50%; 
+            left: 5%; 
+            transform: translateY(-50%);
+            width: 250px; 
+            height: 150px; 
+            border: 2px solid #ccc; 
+            border-radius: 5px; 
+        }
+
+        /* Conteneur du puzzle */
+        #output {
+            position: relative;
+            margin-right: 1000px;
+            width: 600px; 
+            margin-top: -150px; 
+        }
+
+        /* Message de succès */
+        #success-message {
+            color: green;
+            font-size: 60px;
+        }
+
+        /* Conteneur pour la miniature et son label */
+        #miniature-container {
+            position: absolute;
+            top: 50%;
+            left: 5%;
+            transform: translateY(-50%);
+            text-align: center;
+        }
+
+        /* Label au-dessus de la miniature */
+        #miniature-label {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 200px;
+            margin-left: 10px;
+        }
+
+    </style>
+</body>
+

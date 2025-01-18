@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <!-- Titre principal et description du jeu -->
+  <h1 style="font-size: 28px; color: #003366; font-weight: bold; margin-top: 0px; margin-top: 0px; margin-left: 200px;">
+    L'Ancien Arsenal de Genève : Lieu de Refuge pour les Huguenots et Symbole de la Réforme
+  </h1>
+  <h2 style="font-size: 18px; color: #555555; font-weight: normal; margin-top: 10px; margin-left: 30px;">
+    Découvrez la fresque murale de l'Ancien Arsenal en résolvant le labyrinthe. Commencez à la case verte et glissez jusqu'à une des cases rouges pour révéler la fresque murale commémorant l'accueil des réfugiés huguenots, artisans du renouveau religieux et social à Genève pendant la Réforme.
+  </h2>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Labyrinthe interactif</title>
+  <style>
+    /* Styles des cellules du labyrinthe */
+    rect {
+      fill: white;
+      stroke: black;
+    }
+    .transparent {
+      fill: transparent;
+      stroke: none;
+    }
+    .celltext {
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      pointer-events: none; 
+      fill: transparent; 
+    }
+
+
+    /* Styles du bouton de fermeture du jeu */
+    #close-btn {
+      position: absolute;
+      top: 25px;
+      left: 20px;
+      font-size: 30px;
+      color: black;
+      text-decoration: none;
+      font-weight: bold;
+      background-color: #f9f9f9;
+      padding: 5px;
+      border-radius: 50%;
+      border: 2px solid black;
+      margin-top: -20px;
+    }
+
+    #close-btn:hover {
+      color: white;
+      background-color: red;
+    }
+
+    /* Positionnement du labyrinthe */
+    #maze {
+      margin-left: 330px; 
+      margin-top: -5px;   
+      touch-action: none;
+    }
+
+    /* Position des images des fresques*/
+    #fresque-image {
+      width: 200px; 
+      height: auto; 
+      position: absolute; 
+      top: 450px; 
+      left: 1210px; 
+   
+    }
+
+    /* Styles pour les nouvelles images de fresque (ajoutées plus tard) */
+    .additional-image {
+      width: 130px; 
+      height: auto; 
+      position: absolute; 
+      left: 1230px;
+    }
+
+    /* Positionnement de chaque image*/
+    #image1 {
+      top: 0px; 
+      left: 1210px; 
+      width: 130px;
+      margin-top: 100px;
+    }
+
+    #image2 {
+      width: 170px;
+      top: 600px; 
+      left: 1210px; 
+    }
+
+    #image3 {
+      width: 150px;
+      top: 195px; 
+      left: 1210px; 
+    }
+    #image4 {
+      width: 190px;
+      top: 310px;
+      left: 1210px; 
+    }
+
+    /* Styles des flèches reliant les sorties du labyrinthe avec les fresques */
+    .arrow {
+      position: absolute;
+      width: 100px; 
+      height: 2px; 
+      background-color: black;
+    }
+
+    /* Ajout de la flèche en triangle */
+    .arrow::after {
+      content: '';
+      position: absolute;
+      right: 0; 
+      top: -5px;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      border-left: 10px solid black;
+    }
+
+    /* Positionnement de chaque flèche*/
+    #arrow1 {
+      width: 100px;
+      top: 160px;
+      left: 1120px;
+      transform: rotate(-50deg); 
+    }
+
+    #arrow2 {
+      width: 60px;
+      top: 280px;
+      left: 1140px;
+      transform: rotate(-25deg);
+    }
+
+    #arrow3 {
+      width: 60px;
+      top: 410px;
+      left: 1140px;
+      transform: rotate(0deg); 
+    }
+
+    #arrow4 {
+      width: 60px;
+      top: 620px;
+      left: 1140px;
+      transform: rotate(10deg); 
+    }
+
+    #arrow5 {
+      width: 60px;
+      top: 540px;
+      left: 1140px;
+      transform: rotate(0deg); 
+    }
+
+    /* Style pour le message de bravo quand le labyrinthe est réussi */
+    #bravo-message {
+      position: absolute;
+      top: 400px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 48px;
+      color: rgb(27, 237, 27);
+      font-weight: bold;
+      display: none; 
+    }
+
+    /* Styles de certaines cellules du labyrinthe */
+      .red-cell {
+      fill: red;
+    }
+      .blue-wall {
+      fill: #335577; 
+    }
+
+
+    /* Style du texte indiquant où commencer le labyrinthe */
+    #start-text {
+      position: absolute;
+      top: 400px; 
+      left: 80px; 
+      font-size: 16px;
+      color: #333;
+      font-weight: bold;
+    }
+
+    /* Styles spécifiques pour écrans plus petits : ici : l'iPad Air (1180x820) */
+    @media (max-width: 1180px) and (max-height: 820px) {
+      #start-text {
+        margin-top: 30px; 
+        font-size: 14px; 
+      }
+
+      .arrow {
+        top: calc(var(--arrow-original-top) + 25px);
+      }
+
+      #arrow1 {
+        top: 180px; 
+      }
+
+      #arrow2 {
+        top: 300px; 
+      }
+
+      #arrow3 {
+        top: 430px; 
+      }
+
+      #arrow4 {
+        top: 640px; 
+      }
+
+      #arrow5 {
+        top: 560px; 
+      }
+    }
+
+    /* Styles spécifiques pour l'iPad Mini (1024x768) */
+    @media (max-width: 1024px) and (max-height: 768px) {
+      #start-text {
+        margin-top: 40px; 
+        font-size: 14px; 
+      }
+
+      #arrow1 {
+        top: calc(160px + 40px); 
+      }
+
+      #arrow2 {
+        top: calc(280px + 40px); 
+      }
+
+      #arrow3 {
+        top: calc(410px + 40px); 
+      }
+
+      #arrow4 {
+        top: calc(620px + 40px); 
+      }
+
+      #arrow5 {
+        top: calc(540px + 40px);
+      }
+    }
+
+
+
+    
+
+
+
+    
+  </style>
+</head>
+<body>
+  <!-- Bouton de fermeture pour revenir à l'accueil -->
+  <a href="index.html" id="close-btn">&#10006;</a>
+  <!-- SVG contenant le labyrinthe -->
+  <svg id="maze" width="800" height="600"></svg>
+  <!-- Images de fresques associées -->
+  <img id="fresque-image" src="https://realityquest.city/geneva/factsImg/fresque.png" alt="Fresque">
+  <img id="image1" class="additional-image" src="https://img.fruugo.com/product/2/87/14236872_max.jpg" alt="Holger Danske">
+  <img id="image2" class="additional-image" src="https://www.radiofrance.fr/s3/cruiser-production/2017/05/f3fbd385-591e-45a3-9758-875fc9e81ca8/1200x680_054_lr2006746.jpg" alt="Chappelle Sixtine, Michel Ange">
+  <img id="image3" class="additional-image" src="https://www.meisterdrucke.fr/kunstwerke/1260px/Minoan_-_Minoan_Art_Spring_Fresco_from_Akrotiri_to_Santorini_16th_century_BC_Athenes_Nat_-_%28MeisterDrucke-1022862%29.jpg" alt="Fresque minoenne">
+  <img id="image4" class="additional-image" src="https://lelephant-larevue.fr/wp-content/uploads/2015/01/XVIe-siecle-Plafond-de-la-chapelle-Sixtine-WKM.jpg" alt="Fresque minoenne">
+
+  <!-- Flèches pour relier le labyrinthe aux images -->
+  <div id="arrow1" class="arrow"></div>
+  <div id="arrow2" class="arrow"></div>
+  <div id="arrow3" class="arrow"></div>
+  <div id="arrow4" class="arrow"></div>
+  <div id="arrow5" class="arrow"></div>
+
+  <!-- Message de démarrage -->
+  <div id="start-text">Départ, touchez cette case et glissez :</div>
+
+
+
+  <!-- Message Bravo -->
+  <div id="bravo-message">Bravo !</div>
+
+  <!-- Script D3.js pour générer le labyrinthe -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    // Paramètres du labyrinthe
+    const width = 40; // Largeur d'une cellule
+    const height = 40; // Hauteur d'une cellule
+    const rows = 20; // Nombre de lignes
+    const cols = 40; // Nombre de colonnes
+
+    // Sélection de l'élément SVG
+    const svg = d3.select("#maze");
+
+    // Empêcher le comportement par défaut (comme le défilement de l'écran) sur les événements tactiles
+    const preventDefaultTouch = (event) => {
+      event.preventDefault(); 
+    };
+
+    // Appliquer preventDefault aux événements tactiles sur le labyrinthe
+    svg.node().addEventListener("touchstart", preventDefaultTouch, { passive: false });
+    svg.node().addEventListener("touchmove", preventDefaultTouch, { passive: false });
+
+    // Création des cellules du labyrinthe
+    const cells = [];
+    for (let i = 0; i < rows; i++) {
+      for (let j = 0; j < cols; j++) {
+        cells.push({ x: j * width, y: i * height, transparent: false, id: i * cols + j });
+      }
+    }
+
+    const disableTouchEvents = () => {
+      svg.on("touchstart", null);
+      svg.on("touchmove", null);
+    };
+
+    // Liste des IDs que l'utilisateur doit traverser dans l'ordre pour résussir le labyrinthe
+    const requiredIds = [
+      280, 281, 282, 283, 323, 363, 403, 404, 405, 445, 485, 486, 487, 447, 407, 408, 409, 369,
+      329, 289, 249, 209, 169, 129, 89, 90, 91, 92, 93, 94, 95, 135, 175, 215, 255, 295, 335,
+      375, 415, 416, 417, 418, 419
+    ];
+
+    let currentStep = 0; 
+
+    // Marquer certains carrés comme transparents (qui ne sont pas des murs = l'utilisateur peut les colorier mais elles ne sont pas correctes)
+    for (let i = 0; i < rows; i++) {
+      for (let j = 0; j < cols; j++) {
+        if ([2, 4, 7, 19, 24, 26, 28, 10, 12, 15].includes(i) || [3, 5, 7, 9, 11, 13, 15, 17, 23, 27, 31, 38].includes(j)) {
+          cells[i * cols + j].transparent = true;
+        }
+      }
+    }
+
+    // Ajouter des cellules spécifiques en tant que murs (bleus) = l'utilisateur ne peut pas les colorier.
+    const wallCells = [80, 160, 400, 480, 496, 96];  
+    wallCells.forEach(id => {
+      cells[id].transparent = false; 
+    });
+
+    // Ajouter des cellules spécifiques en rouge
+    const redCells = [99, 179, 299, 419, 499];  
+    redCells.forEach(id => {
+      cells[id].transparent = true; 
+    });
+
+    // Ajouter la cellule 280 en tant que verte
+    const greenCell = 280;
+    cells[greenCell].transparent = true;  
+
+
+
+    // Ajouter d'autres murs ! (nous créons ainsi un labyrinthe) 
+    cells[2 * cols + 4].transparent = false;
+    cells[0 * cols + 3].transparent = false;
+    cells[5 * cols + 5].transparent = false;
+    cells[3 * cols + 5].transparent = false;
+    cells[0 * cols + 5].transparent = false;
+    cells[0 * cols + 7].transparent = false;
+    cells[0 * cols + 9].transparent = false;
+    cells[0 * cols + 11].transparent = false;
+    cells[0 * cols + 13].transparent = false;
+    cells[0 * cols + 15].transparent = false;
+    cells[0 * cols + 17].transparent = false;
+    cells[14 * cols + 3].transparent = false;
+    cells[14 * cols + 5].transparent = false;
+    cells[14 * cols + 7].transparent = false;
+    cells[14 * cols + 9].transparent = false;
+    cells[14 * cols + 11].transparent = false;
+    cells[14 * cols + 13].transparent = false;
+    cells[14 * cols + 15].transparent = false;
+    cells[14 * cols + 17].transparent = false;
+    cells[5 * cols + 7].transparent = false;
+    cells[7 * cols + 7].transparent = false;
+    cells[4 * cols + 8].transparent = false;
+    cells[4 * cols + 6].transparent = false;
+    cells[10 * cols + 6].transparent = false;
+    cells[10 * cols + 13].transparent = false;
+    cells[11 * cols + 9].transparent = false;
+    cells[4 * cols + 11].transparent = false;
+    cells[5 * cols + 13].transparent = false;
+    cells[8 * cols + 17].transparent = false;
+    cells[9 * cols + 5].transparent = false;
+    cells[12 * cols + 4].transparent = false;
+    cells[4 * cols + 13].transparent = false;
+    cells[7 * cols + 16].transparent = false;
+    cells[4 * cols + 16].transparent = false;
+    cells[7 * cols + 11].transparent = false;
+    cells[11 * cols + 15].transparent = false;
+    cells[11 * cols + 17].transparent = false;
+    
+
+    // Dessiner les cellules dans le svg
+    svg.selectAll("rect")
+      .data(cells)
+      .enter()
+      .append("rect")
+      .attr("x", d => d.x)
+      .attr("y", d => d.y)
+      .attr("width", width)
+      .attr("height", height)
+      .attr("id", d => "cell_" + d.id) 
+      .attr("class", d => {
+        if (d.id === greenCell) {
+          return "green-cell"; 
+        } else if (redCells.includes(d.id)) {
+          return "red-cell"; 
+        } else if (wallCells.includes(d.id)) {
+          return "blue-wall"; 
+        }
+        return ""; 
+      })
+      .style("cursor", d => d.id === greenCell ? "pointer" : "default") 
+      .style("fill", d => {
+        if (d.id === greenCell) {
+          return "green";
+        } else if (wallCells.includes(d.id)) {
+          return "#335577"; 
+        } else if (redCells.includes(d.id)) {
+          return "red"; 
+        } else if (d.transparent) {
+          return "transparent"; 
+        } else {
+          return "#335577"; 
+        }
+      });
+
+
+
+    // Afficher les IDs des cellules sur chaque case
+    svg.selectAll(".celltext")
+      .data(cells)
+      .enter()
+      .append("text")
+      .attr("class", "celltext")
+      .attr("x", d => d.x + width / 2)
+      .attr("y", d => d.y + height / 2)
+      .attr("text-anchor", "middle")
+      .attr("dominant-baseline", "middle")
+      .text(d => d.id);
+
+     // Liste des cellules traversées par l'utilisateur
+      let traversedCells = []; 
+
+      // Fonction pour récupérer les coordonnées tactiles lors d'un événement touch
+      const getTouchCoordinates = (event) => {
+        const touch = event.touches[0];
+        const rect = svg.node().getBoundingClientRect();
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        return [x, y];
+      };
+
+      // Vérifie si la cellule est un mur (bleue) (non traversable)
+      const isWall = (cellId) => {
+        const cell = cells[cellId];
+        return !cell.transparent; 
+      };
+
+      // Fonction pour vérifier si la cellule est adjacente à une cellule déjà coloriée
+      const isAdjacentToColoredCell = (cellId) => {
+        const row = Math.floor(cellId / cols);
+        const col = cellId % cols;
+
+        // Vérifier les 4 cases adjacentes (haut, bas, gauche, droite)
+        const neighbors = [
+          { row: row - 1, col: col }, 
+          { row: row + 1, col: col }, 
+          { row: row, col: col - 1 }, 
+          { row: row, col: col + 1 }  
+        ];
+
+        // Vérifier si une des cases adjacentes est dans traversedCells
+        return neighbors.some(neighbor => {
+          const neighborId = neighbor.row * cols + neighbor.col;
+          return traversedCells.includes(neighborId);
+        });
+      };
+
+      // Fonction pour afficher le message "Bravo" avec un conteneur et un bouton
+      const showBravoMessage = () => {
+          // Création du conteneur blanc légèrement transparent
+          const bravoContainer = document.createElement('div');
+          bravoContainer.style.position = 'absolute';
+          bravoContainer.style.top = '50%';
+          bravoContainer.style.left = '50%';
+          bravoContainer.style.transform = 'translate(-50%, -50%)';
+          bravoContainer.style.backgroundColor = 'rgba(255, 255, 255, 0.9)'; 
+          bravoContainer.style.border = '2px solid #ccc';
+          bravoContainer.style.borderRadius = '10px';
+          bravoContainer.style.boxShadow = '0px 4px 10px rgba(0, 0, 0, 0.3)';
+          bravoContainer.style.padding = '20px';
+          bravoContainer.style.textAlign = 'center';
+
+          // Création du message "Bravo"
+          const bravoMessage = document.createElement('p');
+          bravoMessage.textContent = 'Bravo ! Vous avez complété le labyrinthe !';
+          bravoMessage.style.fontSize = '24px';
+          bravoMessage.style.color = '#333';
+          bravoMessage.style.marginBottom = '20px';
+          bravoContainer.appendChild(bravoMessage);
+
+          // Création du bouton "Retourner à l'accueil"
+          const returnButton = document.createElement('button');
+          returnButton.textContent = 'Retourner à l\'accueil';
+          returnButton.style.fontSize = '18px';
+          returnButton.style.padding = '10px 20px';
+          returnButton.style.border = 'none';
+          returnButton.style.borderRadius = '5px';
+          returnButton.style.backgroundColor = 'rgba(76, 175, 80, 0.9)'; 
+          returnButton.style.color = '#ffffff';
+          returnButton.style.cursor = 'pointer';
+          returnButton.style.boxShadow = '0px 4px 6px rgba(0, 0, 0, 0.2)'; 
+          returnButton.addEventListener('click', () => {
+              window.location.href = 'index.html';
+          });
+
+          bravoContainer.appendChild(returnButton);
+          document.body.appendChild(bravoContainer);
+
+          // Enregistre que le mini-jeu du labyrinthe est réussi
+          localStorage.setItem('labyrintheCompleted', 'true');
+
+
+      };
+
+
+      // Fonction pour traiter le toucher ou le glissement
+      const handleTouch = (event) => {
+        const [x, y] = getTouchCoordinates(event); 
+        const col = Math.floor(x / width);
+        const row = Math.floor(y / height);
+        const cellId = row * cols + col;
+
+        // Vérifier si la cellule est un mur
+        if (isWall(cellId)) {
+          console.log("ID touché (mur) : " + cellId);
+          return;
+        }
+
+        // Vérifier si la cellule est la première ou adjacente à une cellule déjà coloriée
+        if (traversedCells.length === 0 || isAdjacentToColoredCell(cellId)) {
+
+          // Marquer la cellule en vert si elle est admissible
+          d3.select("#cell_" + cellId).style("fill", "green");
+
+          // Ajouter la cellule colorée à la liste des traversedCells
+          traversedCells.push(cellId);
+
+          // Si la cellule touchée fait partie des requiredIds et est la prochaine dans l'ordre
+          if (cellId === requiredIds[currentStep]) {
+            currentStep++;
+            console.log("ID touché (correct) : " + cellId);
+
+            // Si toutes les étapes sont validées, afficher "Bravo"
+            if (currentStep === requiredIds.length) {
+              console.log("Bravo !");
+              showBravoMessage();
+            }
+          } else if (requiredIds.includes(cellId)) {
+            // Si la cellule est dans requiredIds mais pas dans l'ordre, ne pas avancer
+            console.log("ID touché (incorrect, hors ordre) : " + cellId);
+          } else {
+            // La case touchée est blanche et hors de requiredIds, rien à faire
+            console.log("ID touché (autre) : " + cellId);
+          }
+
+        } else {
+          // La cellule n'est pas adjacente à une cellule coloriée
+          console.log("ID touché (non adjacent) : " + cellId);
+        }
+      };
+
+      // Ajouter les événements tactiles
+      svg.on("touchstart", handleTouch);
+      svg.on("touchmove", handleTouch);
+
+
+
+
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+

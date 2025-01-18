@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Titre de la page -->
+    <title>Carte de la vieille ville de Genève</title>
+    <!-- Feuilles de style externes pour Leaflet et Leaflet Routing Machine -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+
+    <style>
+        /* Style de carte avec des marges pour ajuster le contenu */
+        #map {
+            height: 80.5vh; 
+            margin-left: 10%; 
+            margin-bottom: -5px;
+            width: 80%; 
+        }
+        /* Annulation des comportements par défaut des navigateurs pour les interactions tactiles */
+        html, body {
+            touch-action: manipulation;
+            overscroll-behavior: contain; 
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0); 
+        }
+    
+        /* Style de base pour les marqueurs personnalisés */
+        .marker {
+            fill: red;
+            stroke: #FFF;
+            stroke-width: 2px;
+        }
+    
+        /* Style du conteneur pour afficher les pièces de texte récupérées */
+        #pieces-container {
+            position: relative;
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 1rem; 
+        }
+    
+        /* Style des résultats du jeu (adresse finale) */
+        #result {
+            position: absolute;
+            top: 2%; 
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            font-size: 2rem; 
+            color: green;
+            z-index: 1000; 
+        }
+    
+        /* Style de la ligne horizontale qui s'affiche sous chaque lettre du mot secret */
+        .line {
+            display: inline-block; 
+            width: 2vw;
+            height: 0.5vh; 
+            background-color: black;
+            margin: 0 0.5rem; 
+            position: relative; 
+        }
+    
+        /* Style d'affichage des lettres dans le mot secret */
+        .letter-display {
+            position: absolute;
+            top: -1.8rem;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 1.8rem;
+        }
+
+        /* Style du conteneur du titre */
+        #title-container h1 {
+            font-size: 1.25rem; 
+            color: darkblue; 
+            margin-bottom: -2rem;
+            font-weight: normal;
+        }
+    
+        /* Style du titre principal */
+        #main-title {
+            font-family: Helvetica, sans-serif;
+            font-size: 1.8rem;
+            color: rgb(106, 2, 2);
+            text-align: center;
+            margin-top: -1rem;
+            margin-bottom: -1rem;
+        }
+    
+        /* Style du conteneur du sous-titre (consigne) */
+        #title-container h3 {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 1rem; 
+            color: rgb(219, 9, 9); 
+            margin-bottom: -1.5rem; 
+            font-weight: normal;
+        }
+    
+        /* Stle du conteneur des lignes */
+        #lines-container {
+            margin-top: -1rem; 
+            text-align: center;
+        }
+    
+        /* Style du bouton pour réinitialiser le jeu */
+        #resetButton {
+            position: absolute;
+            top: 12%; 
+            right: 90%; 
+            padding: 0.5rem;
+            height: 15vh; 
+            width: 9.8vw;
+            font-size: 1rem;
+            background-color: red;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            z-index: 1000; 
+        }
+    
+        /* Style des boutons transparents qui permettent d'identifier si une lettre est apparue dans le mot secret */
+        .transparent-square {
+            position: absolute;
+            width: 2.5vw; 
+            height: 2.5vh;
+            background-color: rgba(0, 0, 0, 0.1);
+            top: -2.5vh; 
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: auto;
+        }
+    
+        /* Styles des titres et conteneurs des titres */
+        #title-container-wrapper {
+            background-color: #f5f5f5;
+            padding: 2vh 0; 
+            margin-bottom: 1vh; 
+            border-bottom: 2px solid #ddd; 
+    
+        }
+    
+        #title-container-wrapper h1,
+        #title-container-wrapper h3 {
+            margin: 1rem; 
+            text-align: center; 
+        }
+    
+        #title-wrapper {
+            background-color: #f8f8f8; 
+            padding: 1rem; 
+            border-radius: 0.5rem; 
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1); 
+            margin: 0 auto; 
+            max-width: 78%; 
+            max-height: 20%;
+            margin-bottom: 1vh; 
+            margin-top: -0.5vh; 
+            border: 2px solid #ccc; 
+            text-align: center; 
+        }
+    
+        /* Styles pour le bouton de recentrage de la carte */
+        #centerMapButton {
+            position: absolute;
+            top: 28%; 
+            right: 90%; 
+            padding: 0.5rem;
+            height: 15vh; 
+            width: 9.8vw; 
+            font-size: 1rem;
+            background-color: gray;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            z-index: 1000; 
+        }
+
+        /* Style par défaut des boutons */
+        .responsive-button {
+            font-size: 18px; 
+            padding: 10px 20px; 
+            border: 2px solid #0073e6; 
+            border-radius: 8px; 
+            background-color: #f0f8ff; 
+            color: #333; 
+            cursor: pointer; 
+            text-align: center; 
+        }
+
+        /* Animation de clignotement pour les lettres */
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        .blink {
+            animation: blink 1s steps(5, start) 3; 
+        }
+    
+        /* Adaptation du style pour les petits écrans */
+        @media (max-width: 768px) {
+            #map {
+                height: 40vh; 
+                width: 90%;
+                margin-left: 5%;
+            }
+    
+            #resetButton,
+            #centerMapButton {
+                height: 6vh;
+                width: 8vw;
+                font-size: 0.75rem;
+            }
+    
+            .line {
+                width: 1.5vw;
+                height: 0.4vh;
+            }
+    
+            .letter-display {
+                font-size: 1.25rem;
+            }
+    
+            #main-title {
+                font-size: 1.5rem;
+            }
+    
+            #title-container h1 {
+                font-size: 1rem;
+            }
+        }
+    </style>
+    
+</head>
+<body>
+
+    <!-- Titre principal -->
+    <div id="title-wrapper">
+        <div id="main-title">Jeu Interactif : Sur les traces des lieux de la Réforme genevoise</div>
+        <div id="title-container" style="text-align: center; margin: 20px 0;">
+            <h1>Cliquez sur les icones, résolvez les mini-jeux pour gagner une lettre ou un chiffre et découvrez l'adresse du lieu secret en dessous de la carte</h1>
+        </div>
+    </div>
+    <!-- Conteneur de la carte Leaflet -->
+    <div id="map"></div>
+    <!-- Conteneurs pour afficher le mot secret, les résultats -->
+    <div id="secret-word-container" style="display: flex; align-items: center; justify-content: center; margin-top: 20px;">
+        <!-- Texte "Mot Secret" -->
+        <div id="secret-word-label" style="font-size: 24px; font-weight: bold; color: darkblue; margin-right: 10px; margin-bottom: -5px;">
+            Adresse du lieu secret : 
+        </div>
+    <div id="pieces-container"></div> 
+    <div id="result"></div> 
+    <div id="lines-container" style="margin-top: 20px; text-align: center;"></div> 
+
+    <!-- Style de l'affichage du message indiquant une inactivité sur la page -->
+    <div id="inactivityOverlay" style="
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    font-family: Arial, sans-serif;
+    color: white;
+    ">
+    <div style="padding: 20px; background-color: rgba(0, 0, 0, 0.9); border-radius: 10px; max-width: 400px;">
+        <h2 style="margin-bottom: 20px;">Inactivité détectée</h2>
+        <p>Le jeu va se réinitialiser dans <span id="countdownTimer">30</span> secondes. Si vous commencez le jeu, laissez le jeu se réinitialiser, sinon, cliquer sur le bouton pour continuer votre session</p>
+        <button id="continueButton" style="
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #00bfff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        ">Continuer avec la session en cours</button>
+    </div>
+    </div>
+
+
+<!-- Bouton pour réinitialiser le jeu -->
+<button class="responsive-button" id="resetButton" onclick="resetGame()">Recommencer<br>le jeu</button>
+<!-- Bouton pour recentrer la carte -->
+<button class="responsive-button" id="centerMapButton" onclick="centerMap()">Recentrer<br>la carte</button>
+
+
+    <!-- Scripts pour Leaflet et D3.js -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        // Initialisation de la carte Leaflet centrée sur la "Maison Tavel" avec zoom limité
+        var map = L.map('map', {
+            zoomControl: true,
+            maxZoom: 18, 
+            minZoom: 14  
+        }).setView([46.201959880626424, 6.14730078708044], 17); 
+
+        // Ajout d'un calque de tuiles pour afficher les cartes
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© CARTO'
+        }).addTo(map);
+
+        // Ajout d'une échelle en bas à droite de la carte
+        L.control.scale({
+            position: 'bottomright', 
+            metric: true,           
+            imperial: false          
+        }).addTo(map);
+
+        // Données des marqueurs avec des icônes personnalisées
+        var waypoints = [
+            { name: "La fontaine de l'Escalade", coordinates: [46.20374005005952, 6.14376619916994], iconUrl: 'https://cdn-icons-png.flaticon.com/512/382/382316.png' },
+            { name: "Le Musée Tatiana Zoubov", coordinates: [46.20169750116412, 6.1445213669340175], iconUrl: 'https://cdn-icons-png.flaticon.com/512/3936/3936764.png' },
+            { name: "Le Monument international de la Réformation", coordinates: [46.20021323907556, 6.145877866790115], iconUrl: 'https://cdn-icons-png.flaticon.com/128/5985/5985359.png' },
+            { name: "Hôtel de Ville", coordinates: [46.20082826849649, 6.14685899892906], iconUrl: 'https://cdn-icons-png.flaticon.com/512/4797/4797110.png' },
+            { name: "L'Ancien Arsenal", coordinates: [46.20118262528934, 6.1470305989292005], iconUrl: 'https://cdn-icons-png.flaticon.com/512/2144/2144733.png' },
+            { name: "La Maison Tavel", coordinates: [46.201439880626424, 6.14730078708044], iconUrl: 'https://cdn-icons-png.flaticon.com/512/3936/3936764.png' },
+            { name: "La Place du Bourg-de-Four", coordinates: [46.20009574069345, 6.1490588877031715], iconUrl: 'https://cdn-icons-png.flaticon.com/512/9732/9732185.png' },
+            { name: "Le Musée international de la Réforme", coordinates: [46.20142631586874, 6.148557910985599], iconUrl: 'https://cdn-icons-png.flaticon.com/512/3936/3936764.png' },
+            { name: "La Cathédrale Saint-Pierre", coordinates: [46.20123740229765, 6.1482750374787365], iconUrl: 'https://cdn-icons-png.flaticon.com/512/4313/4313544.png' },
+            { name: "Le site archéologique de la Cathédrale Saint-Pierre", coordinates: [46.201085840345335, 6.147888138975222], iconUrl: 'https://cdn-icons-png.flaticon.com/512/3936/3936764.png' },
+            { name: "Auditoire de Calvin", coordinates: [46.20085503585228, 6.148318004371298], iconUrl: 'https://cdn-icons-png.flaticon.com/512/9061/9061938.png' },
+            { name: "Le Collège Calvin", coordinates: [46.2008686039396, 6.151007748107211], iconUrl: 'https://cdn-icons-png.freepik.com/512/4729/4729436.png' },
+            { name: "Eglise Evangélique luthérienne de Genève", coordinates: [46.20097696309722, 6.149556623691599], iconUrl: 'https://cdn-icons-png.flaticon.com/512/9061/9061938.png' },
+            { name: "La Tour du Molard", coordinates: [46.20387914429126, 6.148108876482555], iconUrl: 'https://cdn-icons-png.flaticon.com/256/993/993612.png' },
+        ];
+        
+
+        // Fonction pour réinitialiser le jeu
+        function resetGame() {
+            // Supprime toutes les entrées de localStorage liées aux mini-jeux
+            localStorage.removeItem('puzzleCompleted');
+            localStorage.removeItem('quizCompleted');
+            localStorage.removeItem('labyrintheCompleted');
+            localStorage.removeItem('reformationMuseumCompleted');
+            localStorage.removeItem('cathedralePuzzleCompleted');
+            localStorage.removeItem('europeCalvinCompleted');
+            localStorage.removeItem('escaladeGameCompleted');
+            localStorage.removeItem('auditoireGameCompleted');
+            localStorage.removeItem('bourgDeFourGameCompleted');
+            localStorage.removeItem('lutherianQuizCompleted');
+            localStorage.removeItem('hotelDeVilleQuizCompleted');
+            localStorage.removeItem('collegeCalvinCompleted');
+            localStorage.removeItem('tatianaZoubovPuzzleCompleted');
+            localStorage.removeItem('tourDuMolardCompleted');
+            localStorage.removeItem('reformationGameCompleted');
+
+            // Supprime toutes les lettres enregistrées dans localStorage
+            for (let i = 0; i < 14; i++) {
+                localStorage.removeItem(`letter-${i}`);
+            }
+
+            // Supprime les informations sur les carrés supprimés
+            for (let i = 0; i < 14; i++) {
+                localStorage.removeItem(`square-${i}`);
+            }
+
+            // Réaffiche tous les carrés
+            for (let i = 0; i < 14; i++) {
+                const squareElement = document.getElementById(`transparent-square-${i}`);
+                if (squareElement) {
+                    squareElement.style.display = 'block'; 
+                }
+            }
+
+            // Recharge la page pour réinitialiser l'interface
+            location.reload();
+        }
+
+        // Fonction pour recentrer la carte sur la Maison Tavel
+        function centerMap() {
+            // Recentrer la carte sur les coordonnées initiales avec le niveau de zoom spécifié
+            map.setView([46.201959880626424, 6.14730078708044], 17);
+        }
+
+
+
+        // Fonction pour ajouter des marqueurs sur la carte
+        function addMarkers(waypoints) {
+            waypoints.forEach(function(waypoint) {
+                let icon;
+
+                // Vérifiez si le mini-jeu de la Tour du Molard est terminé et placer le "OK" sur l'icone
+                if (waypoint.name === "La Tour du Molard" && localStorage.getItem('puzzleCompleted') === 'true') {
+                    icon = createOkIcon(waypoint); // Icône OK pour la Tour du Molard
+                } 
+                // Vérifiez si le mini-jeu de la Maison Tavel est terminé et placer le "OK" sur l'icone
+                else if (waypoint.name === "La Maison Tavel" && localStorage.getItem('europeCalvinCompleted') === 'true') {
+                    icon = createOkIcon(waypoint); // Icône OK pour la Maison Tavel
+                } 
+                // Vérifiez si le mini-jeu de l'Ancien Arsenal est terminé et placer le "OK" sur l'icone
+                else if (waypoint.name === "L'Ancien Arsenal" && localStorage.getItem('labyrintheCompleted') === 'true') {
+                    icon = createOkIcon(waypoint); // Icône OK pour l'Ancien Arsenal
+                } 
+                // Vérifiez si le mini-jeu du site archéologique est terminé et placer le "OK" sur l'icone
+                else if (waypoint.name === "Le site archéologique de la Cathédrale Saint-Pierre" && localStorage.getItem('quizCompleted') === 'true') {
+                    icon = createOkIcon(waypoint); // Icône OK pour le site archéologique
+                }
+                // Vérifiez si le mini-jeu du Monument de la Réforme est terminé et placer le "OK" sur l'icone
+                else if (waypoint.name === "Le Monument international de la Réformation" && localStorage.getItem('reformationGameCompleted') === 'true') {
+                    icon = createOkIcon(waypoint); // Icône OK pour le monument des réformateurs
+                }
+                // Vérifiez si le mini-jeu du Musée de la Réforme est terminé et placer le "OK" sur l'icone
+                else if (waypoint.name === "Le Musée international de la Réforme" && localStorage.getItem('reformationMuseumCompleted') === 'true') {
+                    icon = createOkIcon(waypoint); // Icône OK pour le musée de la Réforme 
+                
+                }
+                // Vérifiez si le mini-jeu de la Cathédrale est terminé et placer le "OK" sur l'icone
+                else if (waypoint.name === "La Cathédrale Saint-Pierre" && localStorage.getItem('cathedralePuzzleCompleted') === 'true') {
+                    icon = createOkIcon(waypoint); // Icône OK pour la cathédrale 
+                }
+                // Vérifiez si le mini-jeu de la fontaine est terminé et placer le "OK" sur l'icone
+                else if (waypoint.name === "La fontaine de l'Escalade" && localStorage.getItem('escaladeGameCompleted') === 'true') {
+                    icon = createOkIcon(waypoint); // Icône OK pour la fontaine 
+                }    
+                // Vérifiez si le mini-jeu de l'Auditoire est terminé et placer le "OK" sur l'icone
+                else if (waypoint.name === "Auditoire de Calvin" && localStorage.getItem('auditoireGameCompleted') === 'true') {
+                    icon = createOkIcon(waypoint); // Icône OK pour l'Auditoire
+                }   
+                // Vérifiez si le mini-jeu de la place est terminé et placer le "OK" sur l'icone
+                else if (waypoint.name === "La Place du Bourg-de-Four" && localStorage.getItem('bourgDeFourGameCompleted') === 'true') {
+                    icon = createOkIcon(waypoint); // Icône OK pour la place
+                }  
+                // Vérifiez si le mini-jeu de l'Eglise Evangélique est terminé et placer le "OK" sur l'icone
+                else if (waypoint.name === "Eglise Evangélique luthérienne de Genève" && localStorage.getItem('lutherianQuizCompleted') === 'true') {
+                    icon = createOkIcon(waypoint); // Icône OK pour l'église évangélique 
+                }
+                // Vérifiez si le mini-jeu de l'Hotel de ville est terminé et placer le "OK" sur l'icone
+                else if (waypoint.name === "Hôtel de Ville" && localStorage.getItem('hotelDeVilleQuizCompleted') === 'true') {
+                    icon = createOkIcon(waypoint); // Icône OK pour l'Hotel de ville 
+                }
+                // Vérifiez si le mini-jeu du collège est terminé et placer le "OK" sur l'icone
+                else if (waypoint.name === "Le Collège Calvin" && localStorage.getItem('collegeCalvinCompleted') === 'true') {
+                    icon = createOkIcon(waypoint); // Icône OK pour le collège 
+                }
+                // Vérifiez si le mini-jeu du Musée Zoubov est terminé et placer le "OK" sur l'icone
+                else if (waypoint.name === "Le Musée Tatiana Zoubov" && localStorage.getItem('tatianaZoubovPuzzleCompleted') === 'true') {
+                    icon = createOkIcon(waypoint); // Icône OK pour le Musée Zoubov
+                }
+
+                else {
+                    // Sinon, utiliser l'icône standard du waypoint
+                    icon = L.icon({ iconUrl: waypoint.iconUrl, iconSize: [40, 40] });
+                }
+
+                // Création d'un marqueur pour un waypoint spécifique et ajout à la carte
+                var marker = L.marker(waypoint.coordinates, { icon: icon }).addTo(map);
+
+                // Déterminer le lien vers le mini-jeu pour chaque waypoint
+                var miniJeuUrl;
+                switch (waypoint.name) {
+                    case "Le site archéologique de la Cathédrale Saint-Pierre":
+                        miniJeuUrl = 'quizz.html';
+                        break;
+                    case "La Tour du Molard":
+                        miniJeuUrl = 'Sortie_puzzle.html';
+                        break;
+                    case "La Maison Tavel":
+                        miniJeuUrl = 'Europe_Calvin.html';  
+                        break;
+                    case "L'Ancien Arsenal":
+                        miniJeuUrl = 'Labyrinthe.html';  
+                        break;
+                    case "Le Monument international de la Réformation":
+                        miniJeuUrl = 'memory.html';
+                        break;
+                    case "Le Musée international de la Réforme":
+                        miniJeuUrl = 'line_temporelle.html';
+                        break;
+                    case "La Cathédrale Saint-Pierre":
+                        miniJeuUrl = 'puzzle_cathedrale.html';
+                        break;
+                    case "La fontaine de l'Escalade":
+                        miniJeuUrl = 'index_links.html';
+                        break;
+                    case "Auditoire de Calvin":
+                        miniJeuUrl = 'Auditoire.html';
+                        break;
+                    case "La Place du Bourg-de-Four":
+                        miniJeuUrl = 'Bourg.html';
+                        break;
+                    case "Eglise Evangélique luthérienne de Genève":
+                        miniJeuUrl = 'Lutherien.html';
+                        break;
+                    case "Hôtel de Ville":
+                        miniJeuUrl = 'Hotel.html';
+                        break;
+                    case "Le Collège Calvin":
+                        miniJeuUrl = 'College.html';
+                        break;
+                    case "Le Musée Tatiana Zoubov":
+                        miniJeuUrl = 'Zubov.html';
+                        break;
+                    default:
+                        miniJeuUrl = '#'; 
+                        break;
+                        
+                }
+
+                // Contenu du popup incluant le nom et un lien vers le mini-jeu
+                var popupContent = `
+                    <div>
+                        <strong>${waypoint.name}</strong><br>
+                        <a href="${miniJeuUrl}" target="_self">Accès au mini-jeu</a>
+                    </div>
+                `;
+
+                // Associe le popup au marqueur
+                marker.bindPopup(popupContent);
+
+                // Gère l'ouverture du popup lorsque l'utilisateur clique sur le marqueur
+                marker.on('click', function() {
+                    marker.openPopup();
+                });
+
+                // Fonction pour recentrer la carte après la fermeture d'un popup
+                map.on('popupclose', function () {
+                    // Recentrer la carte sur la position initiale 
+                    map.setView([46.201959880626424, 6.14730078708044], 17);
+                });
+            });
+        }
+
+        // Fonction pour créer une nouvelle icône "OK" avec l'icône d'origine légèrement transparente pour montrer qu'un mini-jeu est terminé
+        function createOkIcon(waypoint) {
+            return L.divIcon({
+                html: `
+                    <div style="position: relative; width: 40px; height: 40px;">
+                        <!-- Icône d'origine, légèrement transparente -->
+                        <img src="${waypoint.iconUrl}" style="width: 100%; height: 100%; opacity: 0.5;">
+                        <!-- Texte "OK" par-dessus -->
+                        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: green; font-weight: bold; font-size: 20px;">
+                            OK
+                        </div>
+                    </div>
+                `,
+                className: 'custom-ok-icon',
+                iconSize: [80, 80],  
+                iconAnchor: [20, 20] 
+            });
+        }
+
+
+    
+
+
+
+
+        // // Ajoute tous les marqueurs à la carte en utilisant les données de waypoints
+        addMarkers(waypoints);
+
+        // Affiche les lignes pour placer les lettres du mot secret
+        function displayWordLines() {
+            const linesContainer = d3.select("#lines-container");
+
+            // Création de 14 lignes pour les lettres
+            for (let i = 0; i < 14; i++) {
+                const line = linesContainer.append("div")
+                    .attr("class", "line")
+                    .attr("id", `line-${i}`);
+
+                // Ajoute un conteneur pour afficher les lettres
+                line.append("span")
+                    .attr("class", "letter-display")
+                    .attr("id", `letter-display-${i}`)
+                    .text("");
+
+                // Ajouter le carré transparent au-dessus de chaque ligne
+                const square = line.append("div")
+                    .attr("class", "transparent-square")
+                    .attr("id", `transparent-square-${i}`);
+
+                // Vérifier l'état de visibilité dans le localStorage
+                if (localStorage.getItem(`square-${i}`) === "hidden") {
+                    square.style("display", "none");
+                }
+            }
+        }
+
+        // Fonction pour identifier les lettres qui apparaissent et déclenche un clignotement
+        function observeLetters() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && entry.target.textContent.trim() !== "") {
+                        console.log(`Une lettre est entrée dans le carré ${entry.target.id}`);
+
+                        // Ajouter l'effet de clignotement
+                        entry.target.classList.add('blink');
+
+                        // Récupérer l'élément du carré correspondant
+                        const squareId = entry.target.id.replace('letter-display', 'transparent-square');
+                        const squareElement = document.getElementById(squareId);
+
+                        // Supprimer le carré et mettre à jour le localStorage
+                        if (squareElement) {
+                            squareElement.style.display = 'none';
+                            localStorage.setItem(`square-${squareId.split('-')[2]}`, 'hidden');
+                            console.log(`Le carré ${squareId} a été supprimé et est enregistré dans le localStorage.`);
+                        }
+
+                        // Retirer la classe de clignotement après 3 secondes
+                        setTimeout(() => {
+                            entry.target.classList.remove('blink');
+                        }, 3000);
+
+                        // Arrêter l'observation pour ce carré
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, {
+                root: null, 
+                threshold: [0.3, 0.7] 
+            });
+
+            // Ajoute un observateur pour chaque lettre visible
+            for (let i = 0; i < 14; i++) {
+                if (localStorage.getItem(`square-${i}`) !== 'hidden') {
+                    const letterDisplay = document.getElementById(`letter-display-${i}`);
+                    if (letterDisplay) {
+                        observer.observe(letterDisplay);
+                    }
+                }
+            }
+        }
+
+
+        // Vérifie et masque les carrés déjà supprimés (quand une lettre est dessus)
+        function checkDeletedSquares() {
+            for (let i = 0; i < 14; i++) {
+                const squareId = `transparent-square-${i}`;
+                const squareElement = document.getElementById(squareId);
+                if (localStorage.getItem(`square-${i}`) === 'hidden') {
+                    if (squareElement) {
+                        squareElement.style.display = 'none';
+                    }
+                }
+            }
+        }
+
+
+        // Initialisation des traits et des carrés
+        displayWordLines();
+        checkDeletedSquares();
+        observeLetters();
+
+        // Vérifie en permanence les chevauchements entre les lettres et les carrés transparents
+        function detectOverlap() {
+            for (let i = 0; i < 14; i++) {
+                const letterDisplay = document.getElementById(`letter-display-${i}`);
+                const squareElement = document.getElementById(`transparent-square-${i}`);
+
+                if (!letterDisplay || !squareElement) continue;
+
+                // Récupère les positions des éléments dans la fenêtre
+                const letterRect = letterDisplay.getBoundingClientRect();
+                const squareRect = squareElement.getBoundingClientRect();
+
+                // Vérifie si les deux éléments se chevauchent
+                if (
+                    letterRect.left < squareRect.right &&
+                    letterRect.right > squareRect.left &&
+                    letterRect.top < squareRect.bottom &&
+                    letterRect.bottom > squareRect.top
+                ) {
+                    triggerBlinkAndHide(letterDisplay, squareElement, i);
+                }
+            }
+        }
+
+        // Ajoute un effet visuel (clignotement) et masque le carré après chevauchement
+        function triggerBlinkAndHide(letterDisplay, squareElement, index) {
+            if (letterDisplay) {
+                letterDisplay.classList.add('blink');
+                if (squareElement) {
+                    squareElement.style.display = 'none';
+                    localStorage.setItem(`square-${index}`, 'hidden');
+                }
+                setTimeout(() => {
+                    letterDisplay.classList.remove('blink');
+                }, 3000);
+
+                console.log(`Carré ${index} supprimé et lettre clignotante.`);
+            }
+        }
+
+        // Vérifie les chevauchements toutes les 100ms
+        setInterval(detectOverlap, 100); 
+
+        // Charge toutes les lettres sauvegardées depuis localStorage
+        function loadAllLetters() {
+            const linesContainer = document.getElementById('lines-container');
+
+            for (let i = 0; i < 14; i++) {
+                const letter = localStorage.getItem(`letter-${i}`);
+                if (letter) {
+                    const letterDisplay = document.getElementById(`letter-display-${i}`);
+                    if (letterDisplay) {
+                        letterDisplay.textContent = letter; 
+                    }
+                }
+            }
+        }
+
+
+    
+        // Événement déclenché au chargement de la page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAllLetters(); // Charge les lettres
+            checkAllGamesCompleted(); // Vérifie si tous les jeux sont terminés
+            // Vérifiez si chaque mini-jeu a été complété et placez les lettres correspondantes
+            const puzzleCompleted = localStorage.getItem('puzzleCompleted');
+            if (puzzleCompleted === 'true') {
+                placeLetterAtPosition(2, 'E');
+            }
+
+            const quizCompleted = localStorage.getItem('quizCompleted');
+            if (quizCompleted === 'true') {
+                placeLetterAtPosition(3, 'D');
+            }
+
+            const labyrintheCompleted = localStorage.getItem('labyrintheCompleted');
+            if (labyrintheCompleted === 'true') {
+                placeLetterAtPosition(1, 'U');
+            }
+
+            const reformationGameCompleted = localStorage.getItem('reformationGameCompleted');
+            if (reformationGameCompleted === 'true') {
+                placeLetterAtPosition(4, 'U');
+            }
+
+            const reformationMuseumCompleted = localStorage.getItem('reformationMuseumCompleted');
+            if (reformationMuseumCompleted === 'true') {
+                placeLetterAtPosition(5, 'P');
+            }
+
+            const cathedralePuzzleCompleted = localStorage.getItem('cathedralePuzzleCompleted');
+            if (cathedralePuzzleCompleted === 'true') {
+                placeLetterAtPosition(6, 'E');
+            }
+
+            const europeCalvinCompleted = localStorage.getItem('europeCalvinCompleted');
+            if (europeCalvinCompleted === 'true') {
+                placeLetterAtPosition(0, 'R');
+            }
+
+            const escaladeGameCompleted = localStorage.getItem('escaladeGameCompleted');
+            if (escaladeGameCompleted === 'true') {
+                placeLetterAtPosition(7, 'R');
+            }
+
+            const auditoireGameCompleted = localStorage.getItem('auditoireGameCompleted');
+            if (auditoireGameCompleted === 'true') {
+                placeLetterAtPosition(8, 'R');
+            }
+
+            const bourgDeFourGameCompleted = localStorage.getItem('bourgDeFourGameCompleted');
+            if (bourgDeFourGameCompleted === 'true') {
+                placeLetterAtPosition(9, 'O');
+            }
+
+            const lutherianQuizCompleted = localStorage.getItem('lutherianQuizCompleted');
+            if (lutherianQuizCompleted === 'true') {
+                placeLetterAtPosition(10, 'N');
+            }
+
+            const hotelDeVilleQuizCompleted = localStorage.getItem('hotelDeVilleQuizCompleted');
+            if (hotelDeVilleQuizCompleted === 'true') {
+                placeLetterAtPosition(11, 'N°');
+            }
+
+            const collegeCalvinCompleted = localStorage.getItem('collegeCalvinCompleted');
+            if (collegeCalvinCompleted === 'true') {
+                placeLetterAtPosition(12, '1');
+            }
+
+            const tatianaZoubovPuzzleCompleted = localStorage.getItem('tatianaZoubovPuzzleCompleted');
+            if (tatianaZoubovPuzzleCompleted === 'true') {
+                placeLetterAtPosition(13, '9');
+            }
+        });
+
+        // Place une lettre à une position donnée dans l'affichage
+        function placeLetterAtPosition(position, letter) {
+            const letterDisplay = document.getElementById(`letter-display-${position}`);
+            if (letterDisplay) {
+                letterDisplay.textContent = letter;
+            } else {
+                console.error(`Le conteneur de la lettre à la position ${position} est introuvable.`);
+            }
+        }
+
+        // Coordonnées et URL de l'icône du lieu secret
+        const lieuSecretCoordinates = [46.20183086001077, 6.147725045129261];
+        const lieuSecretIconUrl = "https://cdn-icons-png.flaticon.com/512/3774/3774001.png";
+
+
+        // Fonction pour vérifier si tous les jeux sont complétés
+        function checkAllGamesCompleted() {
+            // Liste des clés dans localStorage représentant l'état des jeux
+            const games = [
+                'puzzleCompleted',
+                'quizCompleted',
+                'labyrintheCompleted',
+                'reformationGameCompleted',
+                'reformationMuseumCompleted',
+                'cathedralePuzzleCompleted',
+                'europeCalvinCompleted',
+                'escaladeGameCompleted',
+                'auditoireGameCompleted',
+                'bourgDeFourGameCompleted',
+                'lutherianQuizCompleted',
+                'hotelDeVilleQuizCompleted',
+                'collegeCalvinCompleted',
+                'tatianaZoubovPuzzleCompleted'
+            ];
+
+            // Vérifiez si tous les jeux sont marqués comme complétés dans localStorage
+            const allCompleted = games.every(game => localStorage.getItem(game) === 'true');
+
+            if (allCompleted) {
+                afficherLieuSecret(); 
+            }
+        }
+
+        // Affiche un marqueur pour le lieu secret une fois tous les mini-jeux complétés
+        function afficherLieuSecret() {
+            const icon = L.divIcon({
+                html: `
+                    <div style="position: relative; width: 60px; height: 60px; animation: blink 2s 3;">
+                        <img src="${lieuSecretIconUrl}" style="width: 100%; height: 100%; border-radius: 50%;">
+                    </div>
+                `,
+                className: '',
+                iconSize: [60, 60], 
+                iconAnchor: [30, 30], 
+            });
+
+            const marker = L.marker(lieuSecretCoordinates, { icon: icon }).addTo(map);
+
+            // Contenu du popup affichant le message final
+            const popupContent = `
+                <div style="font-family: Arial, sans-serif; text-align: center; display: flex; align-items: center; gap: 15px; padding: 10px;">
+                    <!-- Image -->
+                    <div style="flex: 1; text-align: center;">
+                        <img src="https://www.delcampe.net/static/img_large/auction/000/928/607/614_001.jpg" 
+                            alt="Passage Secret du Monetier" 
+                            style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 8px; max-height: 150px;">
+                    </div>
+                    <!-- Texte -->
+                    <div style="flex: 2; text-align: left;">
+                        <h2 style="color: #2d2d86; font-size: 18px; margin-bottom: 10px;">🎉 Bravo !</h2>
+                        <p style="font-size: 14px; line-height: 1.6; color: #333;">
+                            Vous avez découvert le passage secret très étroit de <strong>Monetier</strong>, utilisé par les Genevois pour défendre la ville durant la Réforme et durant l'Escalade. Vous pouvez aller le découvrir !
+                        </p>
+                        <p style="font-size: 14px; color: #2d2d86; font-weight: bold; margin-top: 10px;">
+                            Cliquez sur "Recommencer le jeu" pour les prochains utilisateurs!
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            marker.bindPopup(popupContent, {
+                maxWidth: 600, 
+                minWidth: 200, 
+            });
+            marker.openPopup(); 
+        }
+
+
+        // Ajoute un observateur pour détecter les changements dans localStorage (au cas où les jeux seraient complétés dynamiquement)
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAllGamesCompleted();
+            window.addEventListener('storage', function() {
+                checkAllGamesCompleted();
+            });
+        });
+
+        // Gestion de l'inactivité avec un overlay et un compte à rebours
+        let inactivityTimeout;
+        let resetTimeout;
+        let countdownInterval;
+
+        // Fonction pour afficher l'overlay et démarrer le compte à rebours
+        function showInactivityOverlay() {
+            const overlay = document.getElementById('inactivityOverlay');
+            const countdownTimer = document.getElementById('countdownTimer');
+            let countdown = 60;
+
+            overlay.style.display = 'flex'; // Afficher l'overlay
+            countdownTimer.textContent = countdown;
+
+            // Démarrer le compte à rebours
+            countdownInterval = setInterval(() => {
+                countdown--;
+                countdownTimer.textContent = countdown;
+
+                if (countdown === 0) {
+                    clearInterval(countdownInterval);
+                    resetGame(); 
+                }
+            }, 1000);
+
+            // Planifier la réinitialisation après 30 secondes si "Continuer le jeu en cours" n'est pas cliqué
+            resetTimeout = setTimeout(() => {
+                overlay.style.display = 'none'; 
+                resetGame();
+            }, 30000);
+        }
+
+        // Fonction pour masquer l'overlay et annuler la réinitialisation si l'utilisateur clique sur "Continuer le jeu en cours"
+        function cancelReset() {
+            const overlay = document.getElementById('inactivityOverlay');
+            overlay.style.display = 'none'; 
+            clearTimeout(resetTimeout); 
+            clearInterval(countdownInterval); 
+            resetOnInactivity(); 
+        }
+
+        // Réinitialisation si l'utilisateur reste inactif (sans interaction ou clic sur "Continuer")
+        function resetOnInactivity(timeout = 30000) { 
+            clearTimeout(inactivityTimeout); 
+
+            inactivityTimeout = setTimeout(() => {
+                showInactivityOverlay(); 
+            }, timeout);
+        }
+
+        // Ajout d'événements uniquement pour surveiller le clic sur "Continuer"
+        document.addEventListener('DOMContentLoaded', () => {
+            resetOnInactivity(); 
+
+            // Gérer le clic sur le bouton "Continuer"
+            document.getElementById('continueButton').addEventListener('click', cancelReset);
+        });
+
+    </script>
+</body>
+</html>
+
+
+
