@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Les aventures de Jean Calvin - Devinettes historiques</title>
+    <!-- Inclusion de la bibliothèque D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- Styles pour la page -->
+    <style>
+        /* Style global pour le body */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 5vh; 
+            color: #333;
+        }
+    
+        /* Style pour le titre principal */
+        h1 {
+            color: #333;
+            font-size: 3vw; 
+            margin-bottom: 2vh; 
+            text-align: center;
+        }
+    
+        /* Style pour le conteneur SVG de la carte */
+        svg {
+            border: 0.2vw solid #ccc; 
+            border-radius: 1vw; 
+            box-shadow: 0.5vw 0.5vw 2vw rgba(0, 0, 0, 0.1); 
+            background: linear-gradient(135deg, #a8dadc, #457b9d);
+            margin-bottom: -0.5vh;
+            width: 50%; 
+            height: 50%; 
+        }
+    
+        /* Style pour les marqueurs de villes */
+        .marker {
+            fill: #007bff;
+            cursor: pointer;
+            stroke: #0056b3;
+            stroke-width: 0.15vw; 
+        }
+    
+         /* Style des étiquettes des villes */
+        .city-label {
+            font-size: 0.8vw; 
+            fill: #555;
+        }
+    
+        /* Style pour la boîte de question au dessus de la carte */
+        #question-box {
+            background-color: #fff;
+            border: 0.2vw solid #ccc;
+            border-radius: 1vw; 
+            padding: 2vh; 
+            box-shadow: 0 0 2vw rgba(0, 0, 0, 0.1);
+            margin-bottom: 2vh;
+            width: 90%; 
+            text-align: center;
+        }
+    
+        /* Animation de clignotement utilisée pour les questions */
+        .blink {
+            animation: blink-animation 0.5s ease-in-out 1;
+        }
+    
+        /* Définition de l'animation de clignotement */
+        @keyframes blink-animation {
+            50% { opacity: 0; }
+        }
+    
+        /* Styles pour les marqueurs corrects et incorrects */
+        .correct {
+            fill: #28a745 !important; 
+        }
+    
+        .incorrect {
+            fill: #dc3545 !important; 
+        }
+    
+        /* Style des lignes tracées entre les villes */
+        .line {
+            fill: none;
+            stroke: #e1ff00;
+            stroke-width: 0.2vw; 
+        }
+    
+        /* Style du message de succès */
+        #bravo-message {
+            font-size: 3vw; 
+            color: #28a745;
+            font-weight: bold;
+            display: none;
+            margin-top: 0px;
+            text-align: center;
+        }
+    
+        /* Style pour le bouton de retour à la page principale (index.html) */
+        .close-button {
+            position: absolute;
+            top: 0vh; 
+            left: 2vw;
+            font-size: 2vw; 
+            color: black;
+            text-decoration: none;
+            font-weight: bold;
+            background-color: #f9f9f9;
+            padding: 1vw; 
+            border-radius: 50%;
+            border: 0.2vw solid black;
+        }
+    
+        .close-button:hover {
+            color: white;
+            background-color: red;
+        }
+    
+        /* Style de la boussole */
+        #compass {
+            position: absolute;
+            bottom: 2vh; 
+            right: 5vw; 
+            width: 5vw;
+            height: auto;
+            opacity: 1;
+            pointer-events: none; 
+        }
+    
+    </style>
+    
+</head>
+<body>
+    <!-- Bouton pour retourner à l'accueil -->
+    <a href="index.html" class="close-button">&times;</a>
+    <!-- Conteneur pour le titre principal -->
+    <div id="title-container">
+        <h1 style="font-size: 26px; color: #003366; font-weight: 3vh; margin-bottom: 5px; margin-left: 0px; margin-top: -10px;">
+            Le Parcours Européen de Jean Calvin présenté par la Maison tavel</h1>
+        <h2 style="font-size: 19px; color: #555555; font-weight: 1.5vh; margin-top: 0px;">
+            Suivez les traces de Calvin à travers l'Europe durant la Réforme, comme présenté à la Maison Tavel. Suivez les instructions ci-dessous: </h2>
+    </div>
+    <!-- Boîte pour afficher les questions -->
+    <div id="question-box"></div>
+    <!-- Message de succès, affiché à la fin -->
+    <div id="bravo-message"></div>
+    <!-- Image d'une boussole affichée sur la carte -->
+    <img id="compass" src="https://thumbs.dreamstime.com/b/silhouette-de-boussole-dans-le-noir-cette-image-est-une-illustration-29905265.jpg" alt="Boussole">
+    <!-- Message d'erreur affiché lorsque la mauvaise ville est cliquée -->
+    <div id="error-message" style="
+        position: absolute;
+        top: 180px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: rgba(220, 53, 69, 0.9); /* Rouge avec transparence */
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        font-size: 14px;
+        font-weight: bold;
+        display: none; /* Masqué par défaut */
+        z-index: 1000;">
+        Ce n'est pas la bonne ville !
+    </div>
+    <script>
+        // les dimensions du conteneur SVG
+        var width = 750;
+        var height = 545;
+
+        // Liste des villes à placer sur la carte avec leurs coordonnées géographiques
+        var cities = [
+            { id: 1, name: "Paris", coords: [2.3470222518119646, 48.86370648095907] },
+            { id: 2, name: "Bourges", coords: [2.3965019293727137, 46.982743704870104] },
+            { id: 3, name: "Orléans", coords: [1.9090627893899292, 47.899857125317695] },
+            { id: 4, name: "Angoulême", coords: [0.15636895776091342, 45.64938317913733] },
+            { id: 5, name: "Bâle", coords: [7.587976096296094, 47.85810417915741] },
+            { id: 6, name: "Ferrare", coords: [11.62085890200412, 44.83647281499681] },
+            { id: 7, name: "Genève", coords: [6.14692689828868, 46.00216211785476] },
+            { id: 8, name: "Strasbourg", coords: [7.7500410514158204, 48.878293307173496] },
+            { id: 9, name: "Noyon", coords: [3.0001449971277987, 49.58113419294601] },
+            { id: 10, name: "Lyon", coords: [4.835659, 45.564043] },
+            { id: 11, name: "Marseille", coords: [5.36978, 43.296482] },
+
+            { id: 14, name: "Lausanne", coords: [6.632273, 46.819653] },
+            { id: 15, name: "Venise", coords: [12.315515, 45.640847] },
+            { id: 16, name: "Florence", coords: [11.255814, 43.76956] },
+            { id: 17, name: "Dijon", coords: [5.04148, 47.522047] },
+            { id: 18, name: "Tours", coords: [0.68484, 47.494144] },
+            { id: 19, name: "Rome", coords: [12.496366, 41.902783] },
+            { id: 20, name: "Wittenberg", coords: [12.655, 51.867] },
+            { id: 21, name: "Augsbourg", coords: [10.89779, 48.370545] },
+            { id: 22, name: "Eisenach", coords: [10.3139, 50.9801] }
+        ];
+
+        // Questions et réponses pour chaque étape
+        var questions = [
+            {
+                question: "Cliquez sur Noyon pour commencer le parcours.",
+                correct: "Noyon",
+                options: ["Noyon", "Paris", "Bâle", "Ferrare"]
+            },
+            {
+                question: "Le parcours commence à Noyon, la ville natale de Jean Calvin. Ensuite, il s'est rendu dans la plus grande ville française pour ses études. Cliquez sur la bonne ville parmi : Paris, Marseille ou Genève.",
+                correct: "Paris",
+                options: ["Paris", "Lyon", "Marseille", "Genève"]
+            },
+
+            {
+                question: "Après Paris, il s'est rendu dans une autre ville française proche de Paris pour poursuivre ses études. Cliquez sur la bonne ville parmi : Bâle, Marseille ou Orléans",
+                correct: "Orléans",
+                options: ["Marseille", "Orléans", "Bâle"]
+            },
+            {
+                question: "Après Orléans, il a continué ses études dans une autre ville française proche d'Orléans. Cliquez sur la bonne ville parmi : Bourges ou Marseille",
+                correct: "Bourges",
+                options: ["Bourges", "Marseille"]
+            },
+            {
+                question: "Après Bourges, il a voyagé dans une ville à l'Ouest de la France où il rédige son premier ouvrage. Cliquez sur la bonne ville parmi : Angoulême ou Strasbourg.",
+                correct: "Angoulême",
+                options: ["Angoulême", "Strasbourg"]
+            },
+            {
+                question: "En 1536, Calvin se réfugie en Suisse alémanique, pour fuir les persécutions en France. là, il collabore avec d'autres réformateurs. Cliquez sur la bonne ville suisse parmi : Bâle, Lausanne ou Paris.",
+                correct: "Bâle",
+                options: ["Bâle", "Lausanne", "Paris"]
+            },
+            {
+                question: "Calvin part ensuite au nord de l'Italie pour étendre l'influence de la Réforme dans des régions majoritairement catholiques. Cliquez sur la bonne ville parmi : Ferrare ou Rome",
+                correct: "Ferrare",
+                options: ["Rome", "Ferrare"]
+            },
+            {
+                question: "En 1537, Calvin revient en suisse, mais cette fois-ci en Suisse romande, pour aider à réformer une ville selon les principes protestants. Cliquez sur la bonne ville parmi : Strasbourg, Genève ou Lausanne",
+                correct: "Genève",
+                options: ["Starsbourg", "Genève", "lausanne"]
+            }, 
+            {
+                question: "De 1538 à 1541, Calvin vit ensuite dans l'Est de la France, où il sert comme pasteur pour une communauté française exilée. Cliquez sur la bonne ville parmi : Strasbourg, Paris ou Marseille",
+                correct: "Strasbourg",
+                options: ["Starsbourg", "Paris", "Marseille"]
+            },
+            {
+                question: "En 1541, Calvin est rappelé dans une ville suisse, où il avait déjà vécu, pour diriger la Réforme.  Cliquez sur la bonne ville parmi : Lausanne, Genève ou Strasbourg",
+                correct: "Genève",
+                options: ["Lausanne", "Genève", "Strasbourg"]
+            },
+        ];
+
+        // Indice de la question actuelle
+        var currentQuestionIndex = 0;
+        // Indique si le jeu a démarré
+        var gameStarted = false;
+        // Chemin des villes visitées
+        var pathCoordinates = [];
+
+        // Créer un élément SVG
+        var svg = d3.select("body").append("svg")
+            .attr("width", width)
+            .attr("height", height - 30) 
+            .attr("viewBox", `0 50 ${width} ${height}`); 
+
+        // Charger le fichier GeoJSON pouer la carte de l'Europe ancienne
+        d3.json("old_europee.geojson").then(function(data) {
+            // Créer une projection cartographique centrée sur l'Europe
+            var projection = d3.geoMercator()
+                .center([8, 50])
+                .scale(1500)
+                .translate([width / 2, height / 2 - 50]);
+
+            // Créer un générateur de chemins basé sur la projection
+            var path = d3.geoPath().projection(projection);
+
+            // Dessiner les entités géographiques
+            svg.selectAll("path")
+                .data(data.features)
+                .enter().append("path")
+                .attr("d", path)
+                .attr("fill", "#e0e0e0")
+                .attr("stroke", "#999")
+                .attr("stroke-width", 0.5);
+
+        // Dessiner les marqueurs pour les villes
+        svg.selectAll(".marker")
+            .data(cities)
+            .enter().append("circle")
+            .attr("class", function(d) {
+                return d.name === "Noyon" ? "marker correct" : "marker"; 
+            })
+            .attr("id", function(d) { return "marker-" + d.id; })
+            .attr("cx", function(d) { return projection(d.coords)[0]; })
+            .attr("cy", function(d) { return projection(d.coords)[1]; })
+            .attr("r", 16) 
+            .attr("stroke-width", function(d) {
+                return d.name === "Noyon" ? 3 : 1.5; 
+            })
+            .on("click", handleCityClick);
+
+        //Dessiner les labels des villes
+        svg.selectAll(".city-label")
+            .data(cities)
+            .enter().append("text")
+            .attr("class", "city-label")
+            .attr("x", function(d) {
+                var coords = projection(d.coords);
+                // Si c'est Lyon ou Tours, garder la position horizontale centrée sous le marqueur
+                return d.name === "Lyon" || d.name === "Tours" ? coords[0] : coords[0] + 18;
+            })
+            .attr("y", function(d) {
+                var coords = projection(d.coords);
+                // Si c'est Lyon ou Tours, placer le texte sous le marqueur
+                return d.name === "Lyon" || d.name === "Tours" ? coords[1] + 25 : coords[1] + 6;
+            })
+            .attr("text-anchor", function(d) {
+                // Centrer le texte pour Lyon et Tours
+                return d.name === "Lyon" || d.name === "Tours" ? "middle" : "start";
+            })
+            .text(function(d) { return d.name; });
+
+
+            // Afficher la première question
+            showQuestion();
+        });
+
+        // Fonction pour gérer le clic sur une ville
+        function handleCityClick(event, d) {
+            if (!gameStarted && d.name === "Noyon" && currentQuestionIndex === 0) {
+                gameStarted = true;
+                checkAnswer(d); // Avancer à la question suivante
+            } else if (gameStarted) {
+                checkAnswer(d);
+            } else {
+                alert("Commencez par cliquer sur Noyon.");
+            }
+        }
+
+        // Fonction pour afficher la question actuelle dans la boîte de questions
+        function showQuestion() {
+            var question = questions[currentQuestionIndex];
+            var questionBox = document.getElementById("question-box");
+            questionBox.innerHTML = "<strong>" + question.question + "</strong>";
+        }
+
+
+        // Fonction pour valider si la ville cliquée est correcte
+        function checkAnswer(selectedCity) {
+            // Récupère le nom de la ville correcte pour la question actuelle
+            var correctCityName = questions[currentQuestionIndex].correct;
+            // Sélectionne le marqueur correspondant à la ville cliquée
+            var marker = d3.select(`#marker-${selectedCity.id}`);
+            // Élément pour afficher un message d'erreur en cas de mauvaise réponse
+            var errorMessage = document.getElementById("error-message");
+
+            if (selectedCity.name === correctCityName) {
+                // Si la réponse est correcte, marque la ville en vert
+                marker.classed("correct", true);
+                // Ajoute la ville au chemin tracé
+                addPathCoordinate(selectedCity); 
+                // Fait clignoter la boîte de question pour signaler le changement de question
+                blinkQuestion(); 
+                // Passe à la question suivante
+                currentQuestionIndex++;
+                // Si d'autres questions restent, les affiche
+                if (currentQuestionIndex < questions.length) {
+                    showQuestion();
+                } else {
+                    // Fin du parcours : cache la boîte de question et affiche le message de succès
+                    document.getElementById("question-box").style.display = "none";
+                    document.getElementById("bravo-message").style.display = "block";
+
+                    // Enregistre l'état de succès dans le stockage local (pour index.html)
+                    localStorage.setItem('europeCalvinCompleted', 'true');
+
+                    // Ajouter le conteneur blanc avec le bouton "Retourner à l'accueil"
+                    const bravoContainer = document.createElement('div');
+                    bravoContainer.style.position = 'absolute';
+                    bravoContainer.style.top = '24%';
+                    bravoContainer.style.left = '50%';
+                    bravoContainer.style.transform = 'translate(-50%, -50%)';
+                    bravoContainer.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+                    bravoContainer.style.border = '2px solid #ccc';
+                    bravoContainer.style.borderRadius = '10px';
+                    bravoContainer.style.boxShadow = '0px 4px 10px rgba(0, 0, 0, 0.3)';
+                    bravoContainer.style.padding = '20px';
+                    bravoContainer.style.textAlign = 'center';
+
+                    // Ajouter le message "Bravo !"
+                    const bravoMessage = document.createElement('p');
+                    bravoMessage.textContent = 'Bravo ! Vous avez complété le parcours !';
+                    bravoMessage.style.fontSize = '24px';
+                    bravoMessage.style.color = '#333';
+                    bravoMessage.style.marginBottom = '20px';
+                    bravoContainer.appendChild(bravoMessage);
+
+                    // Ajouter le bouton "Retourner à l'accueil"
+                    const returnButton = document.createElement('button');
+                    returnButton.textContent = 'Retourner à l\'accueil';
+                    returnButton.style.fontSize = '18px';
+                    returnButton.style.padding = '10px 20px';
+                    returnButton.style.border = 'none';
+                    returnButton.style.borderRadius = '5px';
+                    returnButton.style.backgroundColor = 'rgba(76, 175, 80, 0.9)';
+                    returnButton.style.color = '#ffffff';
+                    returnButton.style.cursor = 'pointer';
+
+                    // Rediriger vers index.html lorsque le bouton est cliqué
+                    returnButton.addEventListener('click', () => {
+                        window.location.href = 'index.html';
+                    });
+
+                    bravoContainer.appendChild(returnButton);
+                    document.body.appendChild(bravoContainer);
+                }
+            } else {
+                marker.classed("incorrect", true); 
+
+                // Afficher le message d'erreur
+                errorMessage.style.display = "block";
+                errorMessage.textContent = "Ce n'est pas la bonne ville !"; 
+
+                // Rendre le marqueur rouge temporairement
+                setTimeout(() => {
+                    marker.classed("incorrect", false); 
+                    errorMessage.style.display = "none"; 
+                }, 800); 
+            }
+        }
+
+
+
+
+        // Ajout d'une liste séparée pour les segments spécifiques (par exemple, Genève -> Strasbourg -> Genève)
+        var returnPathCoordinates = [];
+
+        // Ajout d'une liste séparée pour les segments spécifiques (par exemple, Genève -> Strasbourg -> Genève)
+        var returnPathCoordinates = [];
+
+        // Fonction pour ajouter les coordonnées de la ville sélectionnée à la liste et tracer le chemin
+        function addPathCoordinate(city) {
+            var projection = d3.geoMercator()
+                .center([8, 50])
+                .scale(1500)
+                .translate([width / 2, height / 2 - 50]);
+
+            var coordinates = projection(city.coords);
+
+            // Ajouter les coordonnées au chemin principal
+            pathCoordinates.push(coordinates);
+
+            // Détection spécifique pour Strasbourg-Genève (aller-retour)
+            if (
+                (pathCoordinates.length > 1 &&
+                    pathCoordinates[pathCoordinates.length - 2][0] === projection(cities.find(c => c.name === "Strasbourg").coords)[0] &&
+                    city.name === "Genève") ||
+                (pathCoordinates.length > 1 &&
+                    pathCoordinates[pathCoordinates.length - 2][0] === projection(cities.find(c => c.name === "Genève").coords)[0] &&
+                    city.name === "Strasbourg")
+            ) {
+                // Décalage léger pour le trajet retour Strasbourg-Genève
+                let offset = 5; 
+                let shiftedCoordinates = [
+                    coordinates[0] + offset,
+                    coordinates[1] - offset
+                ];
+                returnPathCoordinates.push(shiftedCoordinates);
+            }
+
+            // Supprimer et redessiner les chemins
+            svg.selectAll(".line").remove();
+
+            // Tracer le chemin principal
+            svg.append("path")
+                .attr("class", "line")
+                .attr("d", d3.line()(pathCoordinates))
+                .attr("fill", "none")
+                .attr("stroke", "#e1ff00")
+                .attr("stroke-width", 2);
+
+            // Tracer le chemin parallèle (décalé)
+            if (returnPathCoordinates.length > 1) {
+                svg.append("path")
+                    .attr("class", "line return-line")
+                    .attr("d", d3.line()(returnPathCoordinates))
+                    .attr("fill", "none")
+                    .attr("stroke", "#e1ff00") 
+                    .attr("stroke-width", 2)
+                    .attr("stroke-dasharray", ""); 
+            }
+        }
+
+
+
+        // Fonction pour faire clignoter la boîte de question
+        function blinkQuestion() {
+            var questionBox = document.getElementById("question-box");
+            questionBox.classList.add("blink");
+            setTimeout(function() {
+                questionBox.classList.remove("blink");
+            }, 1000); 
+        }
+
+        // Positionne la boussole en bas à droite du SVG
+        function positionCompass() {
+            const compass = document.getElementById("compass");
+            const svg = document.querySelector("svg");
+
+            // Obtenir les dimensions et la position du SVG
+            const svgRect = svg.getBoundingClientRect();
+
+            // Positionner la boussole dans le coin inférieur droit du SVG
+            compass.style.left = `${svgRect.right - compass.offsetWidth - 10}px`; 
+            compass.style.top = `${svgRect.bottom - compass.offsetHeight - 10}px`; 
+        }
+
+        // Ajoute un écouteur d'événements pour repositionner la boussole dynamiquement
+        document.addEventListener("DOMContentLoaded", () => {
+            // Positionner initialement la boussole
+            positionCompass();
+
+            // Repositionner la boussole lorsqu'il y a des changements dans la carte
+            const questionBox = document.getElementById("question-box");
+            const observer = new MutationObserver(() => {
+                positionCompass();
+            });
+
+            observer.observe(questionBox, { childList: true, subtree: true });
+
+            // Repositionner la boussole lors du redimensionnement de la fenêtre
+            window.addEventListener("resize", positionCompass);
+        });
+
+
+
+    </script>
+</body>
+</html>
