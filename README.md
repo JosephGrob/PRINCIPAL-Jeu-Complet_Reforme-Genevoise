@@ -1,4 +1,4 @@
-# Jeu interactif sur la Réforme protestante genevoise (XVIème siècle)
+# Jeu interactif sur la Réforme protestante genevoise (XVIème siècle), rendu du cours "Géovisualisation dynamique et traitement de données", janvier 2025. 
 
 ## Introduction
 
