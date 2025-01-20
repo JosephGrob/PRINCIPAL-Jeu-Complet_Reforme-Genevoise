@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Le projet **Jeu interactif sur la Réforme genevoise au XVIème siècle** est une expérience éducative numérique qui invite les utilisateurs à explorer l'histoire et les lieux de la Réforme protestante à Genève à travers une série de mini-jeux interactifs. Ces jeux sont intégrés dans une carte interactive qui sert de point de départ pour découvrir divers aspects culturels, religieux et historiques liés à la Réforme.
+Le projet **Jeu interactif sur la Réforme genevoise au XVIème siècle** est une expérience éducative numérique et tactile qui invite les utilisateurs à explorer l'histoire et les lieux de la Réforme protestante à Genève à travers une série de mini-jeux interactifs. Ces jeux sont intégrés dans une carte interactive qui sert de point de départ pour découvrir divers aspects culturels, religieux et historiques liés à la Réforme.
 
 Ce jeu est conçu pour être inclus dans une **borne tactile ou sur des tablettes disponibles au public dans un musée** consacré à la Réforme protestante à Genève. L'objectif est de fournir un moyen ludique et immersif de découvrir ou d'approfondir les connaissances sur cette période clé de l'histoire genevoise. 
 
